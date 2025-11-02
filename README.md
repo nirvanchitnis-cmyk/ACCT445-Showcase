@@ -13,13 +13,6 @@ This repository demonstrates quantitative analysis of the **CECL Note Opacity In
 - **Stability dimension (S)** had strongest correlation with stock volatility (ρ = 0.42, p < 0.01)
 - During SVB collapse (March 2023), opaque banks (Q4) had -15% CAR vs. transparent banks (Q1) -5% CAR
 
-🏆 **Best Performers (Most Transparent):**
-1. **AmeriServ Financial (AMSF)** - CNOI: 7.86
-2. **JPMorgan Chase (JPM)** - CNOI: 8.29
-
-⚠️ **Worst Performers (Most Opaque):**
-1. **Wells Fargo (WFC)** - CNOI: 31.41
-2. **Alerus Financial (ALRS)** - CNOI: 29.23
 
 ---
 
