@@ -9,17 +9,18 @@ References:
 - Newey & West (1987): HAC covariance estimation
 """
 
-import pandas as pd
 import numpy as np
-from typing import Tuple, Optional
-from scipy import stats
+import pandas as pd
+
+from src.utils.exceptions import DataValidationError
+from src.utils.logger import get_logger
+from src.utils.validation import validate_returns_schema
+
+logger = get_logger(__name__)
 
 
 def assign_deciles(
-    df: pd.DataFrame,
-    score_col: str,
-    n_groups: int = 10,
-    ascending: bool = True
+    df: pd.DataFrame, score_col: str, n_groups: int = 10, ascending: bool = True
 ) -> pd.DataFrame:
     """
     Assign deciles based on CNOI score.
@@ -37,28 +38,28 @@ def assign_deciles(
         >>> df = assign_deciles(cnoi_df, 'CNOI', n_groups=10, ascending=True)
         >>> df.groupby('decile')['CNOI'].mean()
     """
+    if score_col not in df.columns:
+        raise DataValidationError(f"Missing score column '{score_col}'.")
+
     df = df.copy()
 
     # Rank by score
-    df['decile'] = pd.qcut(
-        df[score_col],
-        q=n_groups,
-        labels=range(1, n_groups + 1),
-        duplicates='drop'
+    df["decile"] = pd.qcut(
+        df[score_col], q=n_groups, labels=range(1, n_groups + 1), duplicates="drop"
     )
 
     if not ascending:
         # Reverse decile numbering
-        df['decile'] = n_groups + 1 - df['decile'].astype(int)
+        df["decile"] = n_groups + 1 - df["decile"].astype(int)
 
     return df
 
 
 def compute_decile_returns(
     df: pd.DataFrame,
-    decile_col: str = 'decile',
-    return_col: str = 'ret_fwd',
-    weight_col: Optional[str] = None
+    decile_col: str = "decile",
+    return_col: str = "ret_fwd",
+    weight_col: str | None = None,
 ) -> pd.DataFrame:
     """
     Compute equal-weighted or value-weighted decile returns.
@@ -76,24 +77,35 @@ def compute_decile_returns(
         >>> decile_ret = compute_decile_returns(df, weight_col='market_cap')
         >>> decile_ret.groupby('decile')['return'].mean()
     """
+    if decile_col not in df.columns or return_col not in df.columns:
+        raise DataValidationError("Dataframe missing decile or return columns.")
+
     if weight_col is None:
         # Equal-weighted
-        decile_ret = df.groupby([decile_col, 'date'])[return_col].mean().reset_index()
+        decile_ret = (
+            df.groupby([decile_col, "date"], observed=False)[return_col].mean().reset_index()
+        )
     else:
         # Value-weighted
-        df['weighted_ret'] = df[return_col] * df[weight_col]
-        decile_ret = df.groupby([decile_col, 'date']).apply(
-            lambda x: (x['weighted_ret'].sum() / x[weight_col].sum()) if x[weight_col].sum() > 0 else np.nan
-        ).reset_index()
+        df["weighted_ret"] = df[return_col] * df[weight_col]
+        decile_ret = (
+            df.groupby([decile_col, "date"], observed=False)
+            .apply(
+                lambda x: (
+                    (x["weighted_ret"].sum() / x[weight_col].sum())
+                    if x[weight_col].sum() > 0
+                    else np.nan
+                ),
+                include_groups=False,
+            )
+            .reset_index()
+        )
         decile_ret = decile_ret.rename(columns={0: return_col})
 
     return decile_ret
 
 
-def newey_west_tstat(
-    returns: np.ndarray,
-    lags: int = 3
-) -> Tuple[float, float, float]:
+def newey_west_tstat(returns: np.ndarray, lags: int = 3) -> tuple[float, float, float]:
     """
     Compute Newey-West t-statistic for time-series returns.
 
@@ -108,7 +120,7 @@ def newey_west_tstat(
 
     Example:
         >>> mean, se, tstat = newey_west_tstat(decile_returns, lags=3)
-        >>> print(f"Mean: {mean:.2%}, t-stat: {tstat:.2f}")
+        >>> f"Mean: {mean:.2%}, t-stat: {tstat:.2f}"
     """
     from statsmodels.regression.linear_model import OLS
     from statsmodels.tools.tools import add_constant
@@ -123,7 +135,7 @@ def newey_west_tstat(
     X = add_constant(np.ones(len(returns)))
     y = returns
 
-    model = OLS(y, X).fit(cov_type='HAC', cov_kwds={'maxlags': lags})
+    model = OLS(y, X).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
 
     mean = model.params[0]
     se_nw = model.bse[0]
@@ -136,8 +148,8 @@ def compute_long_short(
     decile_ret: pd.DataFrame,
     low_decile: int = 1,
     high_decile: int = 10,
-    decile_col: str = 'decile',
-    return_col: str = 'ret_fwd'
+    decile_col: str = "decile",
+    return_col: str = "ret_fwd",
 ) -> pd.DataFrame:
     """
     Compute long-short portfolio (low CNOI - high CNOI).
@@ -156,24 +168,24 @@ def compute_long_short(
         >>> ls_ret = compute_long_short(decile_ret, low_decile=1, high_decile=10)
         >>> ls_ret['return'].mean()  # Average LS spread
     """
-    low_ret = decile_ret[decile_ret[decile_col] == low_decile][[return_col, 'date']]
-    high_ret = decile_ret[decile_ret[decile_col] == high_decile][[return_col, 'date']]
+    low_ret = decile_ret[decile_ret[decile_col] == low_decile][[return_col, "date"]]
+    high_ret = decile_ret[decile_ret[decile_col] == high_decile][[return_col, "date"]]
 
-    ls = low_ret.merge(high_ret, on='date', suffixes=('_low', '_high'))
-    ls['ls_return'] = ls[f'{return_col}_low'] - ls[f'{return_col}_high']
+    ls = low_ret.merge(high_ret, on="date", suffixes=("_low", "_high"))
+    ls["ls_return"] = ls[f"{return_col}_low"] - ls[f"{return_col}_high"]
 
-    return ls[['date', 'ls_return']]
+    return ls[["date", "ls_return"]]
 
 
 def run_decile_backtest(
     cnoi_df: pd.DataFrame,
     returns_df: pd.DataFrame,
-    score_col: str = 'CNOI',
-    return_col: str = 'ret_fwd',
+    score_col: str = "CNOI",
+    return_col: str = "ret_fwd",
     n_deciles: int = 10,
-    weight_col: Optional[str] = None,
-    lags: int = 3
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    weight_col: str | None = None,
+    lags: int = 3,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Complete decile backtest pipeline.
 
@@ -191,64 +203,79 @@ def run_decile_backtest(
 
     Example:
         >>> summary, ls = run_decile_backtest(cnoi_df, returns_df)
-        >>> print(summary[['decile', 'mean_ret', 't_stat']])
-        >>> print(ls[['ls_mean', 'ls_tstat']])
+        >>> summary[['decile', 'mean_ret', 't_stat']].head()
+        >>> ls[['ls_mean', 'ls_tstat']]
     """
+    if {"ticker", "date", score_col}.difference(cnoi_df.columns):
+        raise DataValidationError("CNOI dataframe missing required columns for backtest.")
+
+    validate_returns_schema(returns_df, required_columns=("date", "ticker", return_col))
+
     # Assign deciles
     df = assign_deciles(cnoi_df, score_col, n_groups=n_deciles, ascending=True)
 
-    # Merge with returns
-    df = df.merge(returns_df, on=['ticker', 'date'], how='inner')
+    # Merge with returns (drop duplicate return columns if present)
+    if return_col in df.columns:
+        df = df.drop(columns=[return_col])
+    df = df.merge(returns_df, on=["ticker", "date"], how="inner")
 
     # Compute decile returns
     decile_ret = compute_decile_returns(
-        df,
-        decile_col='decile',
-        return_col=return_col,
-        weight_col=weight_col
+        df, decile_col="decile", return_col=return_col, weight_col=weight_col
     )
 
     # Summary statistics per decile
     summary = []
     for decile in range(1, n_deciles + 1):
-        dec_returns = decile_ret[decile_ret['decile'] == decile][return_col].values
+        dec_returns = decile_ret[decile_ret["decile"] == decile][return_col].values
 
         mean, se_nw, t_stat = newey_west_tstat(dec_returns, lags=lags)
 
-        summary.append({
-            'decile': decile,
-            'mean_ret': mean,
-            'std_ret': np.nanstd(dec_returns),
-            'se_nw': se_nw,
-            't_stat': t_stat,
-            'sharpe': mean / np.nanstd(dec_returns) if np.nanstd(dec_returns) > 0 else np.nan,
-            'n_obs': len(dec_returns)
-        })
+        summary.append(
+            {
+                "decile": decile,
+                "mean_ret": mean,
+                "std_ret": np.nanstd(dec_returns),
+                "se_nw": se_nw,
+                "t_stat": t_stat,
+                "sharpe": mean / np.nanstd(dec_returns) if np.nanstd(dec_returns) > 0 else np.nan,
+                "n_obs": len(dec_returns),
+            }
+        )
 
     summary_df = pd.DataFrame(summary)
 
     # Long-short
     ls_ret = compute_long_short(decile_ret, low_decile=1, high_decile=n_deciles)
-    ls_mean, ls_se, ls_t = newey_west_tstat(ls_ret['ls_return'].values, lags=lags)
+    ls_mean, ls_se, ls_t = newey_west_tstat(ls_ret["ls_return"].values, lags=lags)
 
-    ls_summary = pd.DataFrame([{
-        'portfolio': 'Long-Short (D1-D10)',
-        'mean_ret': ls_mean,
-        'std_ret': np.nanstd(ls_ret['ls_return']),
-        'se_nw': ls_se,
-        't_stat': ls_t,
-        'sharpe': ls_mean / np.nanstd(ls_ret['ls_return']) if np.nanstd(ls_ret['ls_return']) > 0 else np.nan,
-        'n_obs': len(ls_ret)
-    }])
+    ls_summary = pd.DataFrame(
+        [
+            {
+                "portfolio": "Long-Short (D1-D10)",
+                "mean_ret": ls_mean,
+                "std_ret": np.nanstd(ls_ret["ls_return"]),
+                "se_nw": ls_se,
+                "t_stat": ls_t,
+                "sharpe": (
+                    ls_mean / np.nanstd(ls_ret["ls_return"])
+                    if np.nanstd(ls_ret["ls_return"]) > 0
+                    else np.nan
+                ),
+                "n_obs": len(ls_ret),
+            }
+        ]
+    )
 
+    logger.info("Completed decile backtest with %s deciles.", n_deciles)
     return summary_df, ls_summary
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Demo with simulated data
-    print("=" * 60)
-    print("Decile Backtest Demo (Simulated Data)")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Decile Backtest Demo (Simulated Data)")
+    logger.info("=" * 60)
 
     # Simulate CNOI scores
     np.random.seed(42)
@@ -259,31 +286,33 @@ if __name__ == "__main__":
     for bank in range(n_banks):
         cnoi_base = np.random.uniform(5, 35)
         for period in range(n_periods):
-            data.append({
-                'ticker': f'BANK{bank:02d}',
-                'date': pd.Timestamp('2023-01-01') + pd.DateOffset(months=3 * period),
-                'CNOI': cnoi_base + np.random.normal(0, 2),
-                'ret_fwd': -0.001 * cnoi_base + np.random.normal(0.02, 0.05),  # Opacity → lower returns
-                'market_cap': np.random.uniform(1e9, 100e9)
-            })
+            data.append(
+                {
+                    "ticker": f"BANK{bank:02d}",
+                    "date": pd.Timestamp("2023-01-01") + pd.DateOffset(months=3 * period),
+                    "CNOI": cnoi_base + np.random.normal(0, 2),
+                    "ret_fwd": -0.001 * cnoi_base
+                    + np.random.normal(0.02, 0.05),  # Opacity → lower returns
+                    "market_cap": np.random.uniform(1e9, 100e9),
+                }
+            )
 
     df = pd.DataFrame(data)
 
     # Run backtest
     summary, ls = run_decile_backtest(
-        df,
-        df,
-        score_col='CNOI',
-        return_col='ret_fwd',
-        weight_col='market_cap',
-        lags=3
+        df, df, score_col="CNOI", return_col="ret_fwd", weight_col="market_cap", lags=3
     )
 
-    print("\nDecile Summary (Value-Weighted):")
-    print(summary[['decile', 'mean_ret', 't_stat', 'sharpe']].to_string(index=False))
+    logger.info(
+        "Decile Summary (Value-Weighted):\n%s",
+        summary[["decile", "mean_ret", "t_stat", "sharpe"]].to_string(index=False),
+    )
 
-    print("\nLong-Short (D1 - D10):")
-    print(ls[['portfolio', 'mean_ret', 't_stat', 'sharpe']].to_string(index=False))
+    logger.info(
+        "Long-Short (D1 - D10):\n%s",
+        ls[["portfolio", "mean_ret", "t_stat", "sharpe"]].to_string(index=False),
+    )
 
-    print("\n" + "=" * 60)
-    print("✓ Backtest complete!")
+    logger.info("=" * 60)
+    logger.info("✓ Backtest complete!")

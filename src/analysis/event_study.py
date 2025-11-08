@@ -11,10 +11,15 @@ References:
 - Campbell et al. (1997): The Econometrics of Financial Markets
 """
 
-import pandas as pd
 import numpy as np
-from typing import Tuple, Optional
+import pandas as pd
 from scipy import stats
+
+from src.utils.exceptions import DataValidationError
+from src.utils.logger import get_logger
+from src.utils.validation import validate_event_inputs, validate_returns_schema
+
+logger = get_logger(__name__)
 
 
 def compute_market_model_params(
@@ -22,8 +27,8 @@ def compute_market_model_params(
     market_returns: pd.Series,
     estimation_window_start: str,
     estimation_window_end: str,
-    ticker_col: str = 'ticker',
-    return_col: str = 'return'
+    ticker_col: str = "ticker",
+    return_col: str = "return",
 ) -> pd.DataFrame:
     """
     Estimate market model parameters (alpha, beta) for each stock.
@@ -49,21 +54,21 @@ def compute_market_model_params(
         ...     '2023-03-08'
         ... )
     """
+    validate_returns_schema(returns_df, required_columns=("date", ticker_col, return_col))
+
+    if not isinstance(market_returns.index, pd.DatetimeIndex):
+        raise DataValidationError("market_returns must have a DatetimeIndex")
+
     est_start = pd.Timestamp(estimation_window_start)
     est_end = pd.Timestamp(estimation_window_end)
 
     # Filter to estimation window
-    est_df = returns_df[
-        (returns_df['date'] >= est_start) &
-        (returns_df['date'] <= est_end)
-    ].copy()
+    est_df = returns_df[(returns_df["date"] >= est_start) & (returns_df["date"] <= est_end)].copy()
 
     # Merge with market returns
-    est_df = est_df.merge(
-        market_returns.rename('market_return').reset_index(),
-        on='date',
-        how='inner'
-    )
+    market_df = market_returns.rename("market_return").to_frame().reset_index()
+    market_df = market_df.rename(columns={"index": "date"})
+    est_df = est_df.merge(market_df, on="date", how="inner")
 
     # Estimate OLS per ticker
     params = []
@@ -77,19 +82,25 @@ def compute_market_model_params(
         from statsmodels.regression.linear_model import OLS
         from statsmodels.tools.tools import add_constant
 
-        X = add_constant(ticker_data['market_return'].values)
+        X = add_constant(ticker_data["market_return"].values)
         y = ticker_data[return_col].values
 
         model = OLS(y, X).fit()
 
-        params.append({
-            'ticker': ticker,
-            'alpha': model.params[0],
-            'beta': model.params[1],
-            'r_squared': model.rsquared,
-            'n_obs': len(ticker_data)
-        })
+        params.append(
+            {
+                "ticker": ticker,
+                "alpha": model.params[0],
+                "beta": model.params[1],
+                "r_squared": model.rsquared,
+                "n_obs": len(ticker_data),
+            }
+        )
 
+    if not params:
+        raise DataValidationError("Insufficient data to estimate market model parameters.")
+
+    logger.info("Estimated market model for %s tickers.", len(params))
     return pd.DataFrame(params)
 
 
@@ -99,8 +110,8 @@ def compute_abnormal_returns(
     params_df: pd.DataFrame,
     event_start: str,
     event_end: str,
-    ticker_col: str = 'ticker',
-    return_col: str = 'return'
+    ticker_col: str = "ticker",
+    return_col: str = "return",
 ) -> pd.DataFrame:
     """
     Compute abnormal returns during event window.
@@ -126,41 +137,36 @@ def compute_abnormal_returns(
         ...     '2023-03-17'
         ... )
     """
+    validate_returns_schema(returns_df, required_columns=("date", ticker_col, return_col))
+
     event_start_ts = pd.Timestamp(event_start)
     event_end_ts = pd.Timestamp(event_end)
 
     # Filter to event window
     event_df = returns_df[
-        (returns_df['date'] >= event_start_ts) &
-        (returns_df['date'] <= event_end_ts)
+        (returns_df["date"] >= event_start_ts) & (returns_df["date"] <= event_end_ts)
     ].copy()
 
     # Merge with market returns
     event_df = event_df.merge(
-        market_returns.rename('market_return').reset_index(),
-        on='date',
-        how='inner'
+        market_returns.rename("market_return").reset_index(), on="date", how="inner"
     )
 
     # Merge with params
-    event_df = event_df.merge(
-        params_df[['ticker', 'alpha', 'beta']],
-        on=ticker_col,
-        how='inner'
-    )
+    event_df = event_df.merge(params_df[["ticker", "alpha", "beta"]], on=ticker_col, how="inner")
 
     # Compute expected return
-    event_df['expected_return'] = event_df['alpha'] + event_df['beta'] * event_df['market_return']
+    event_df["expected_return"] = event_df["alpha"] + event_df["beta"] * event_df["market_return"]
 
     # Compute abnormal return
-    event_df['abnormal_return'] = event_df[return_col] - event_df['expected_return']
+    event_df["abnormal_return"] = event_df[return_col] - event_df["expected_return"]
 
-    return event_df[['ticker', 'date', 'return', 'expected_return', 'abnormal_return']]
+    logger.debug("Computed abnormal returns for %s observations.", len(event_df))
+    return event_df[["ticker", "date", "return", "expected_return", "abnormal_return"]]
 
 
 def compute_cumulative_abnormal_returns(
-    ar_df: pd.DataFrame,
-    ticker_col: str = 'ticker'
+    ar_df: pd.DataFrame, ticker_col: str = "ticker"
 ) -> pd.DataFrame:
     """
     Compute cumulative abnormal returns (CAR) over event window.
@@ -177,24 +183,16 @@ def compute_cumulative_abnormal_returns(
         >>> car_df = compute_cumulative_abnormal_returns(ar_df)
         >>> car_df.sort_values('CAR')
     """
-    car = ar_df.groupby(ticker_col).agg({
-        'abnormal_return': 'sum',
-        'date': 'count'
-    }).reset_index()
+    car = ar_df.groupby(ticker_col).agg({"abnormal_return": "sum", "date": "count"}).reset_index()
 
-    car = car.rename(columns={
-        'abnormal_return': 'CAR',
-        'date': 'n_days'
-    })
+    car = car.rename(columns={"abnormal_return": "CAR", "date": "n_days"})
 
+    logger.debug("Computed CAR for %s tickers.", len(car))
     return car
 
 
 def test_cnoi_car_relationship(
-    car_df: pd.DataFrame,
-    cnoi_df: pd.DataFrame,
-    pre_event_cutoff: str,
-    n_quartiles: int = 4
+    car_df: pd.DataFrame, cnoi_df: pd.DataFrame, pre_event_cutoff: str, n_quartiles: int = 4
 ) -> pd.DataFrame:
     """
     Test relationship between pre-event CNOI and CAR.
@@ -214,48 +212,50 @@ def test_cnoi_car_relationship(
         ...     cnoi_df,
         ...     pre_event_cutoff='2023-03-01'
         ... )
-        >>> print(results)
+        >>> results.head()
     """
     # Get pre-event CNOI scores
     cutoff = pd.Timestamp(pre_event_cutoff)
-    pre_cnoi = cnoi_df[cnoi_df['filing_date'] < cutoff].copy()
+    pre_cnoi = cnoi_df[cnoi_df["filing_date"] < cutoff].copy()
 
     # Latest CNOI per bank before event
-    pre_cnoi = pre_cnoi.sort_values('filing_date').groupby('ticker').last().reset_index()
+    pre_cnoi = pre_cnoi.sort_values("filing_date").groupby("ticker").last().reset_index()
 
     # Merge with CAR
-    merged = car_df.merge(pre_cnoi[['ticker', 'CNOI']], on='ticker', how='inner')
+    merged = car_df.merge(pre_cnoi[["ticker", "CNOI"]], on="ticker", how="inner")
 
     # Assign quartiles
-    merged['cnoi_quartile'] = pd.qcut(
-        merged['CNOI'],
-        q=n_quartiles,
-        labels=[f'Q{i}' for i in range(1, n_quartiles + 1)]
+    merged["cnoi_quartile"] = pd.qcut(
+        merged["CNOI"], q=n_quartiles, labels=[f"Q{i}" for i in range(1, n_quartiles + 1)]
     )
 
     # Summary by quartile
-    summary = merged.groupby('cnoi_quartile').agg({
-        'CAR': ['mean', 'std', 'count'],
-        'CNOI': ['mean', 'min', 'max']
-    }).reset_index()
+    summary = (
+        merged.groupby("cnoi_quartile", observed=False)
+        .agg({"CAR": ["mean", "std", "count"], "CNOI": ["mean", "min", "max"]})
+        .reset_index()
+    )
 
-    summary.columns = ['_'.join(col).strip('_') for col in summary.columns]
+    summary.columns = ["_".join(col).strip("_") for col in summary.columns]
 
     # Test Q1 vs Q4
-    q1_car = merged[merged['cnoi_quartile'] == 'Q1']['CAR'].values
-    q4_car = merged[merged['cnoi_quartile'] == 'Q4']['CAR'].values
+    q1_car = merged[merged["cnoi_quartile"] == "Q1"]["CAR"].values
+    q4_car = merged[merged["cnoi_quartile"] == "Q4"]["CAR"].values
 
-    if len(q1_car) > 0 and len(q4_car) > 0:
+    if len(q1_car) > 1 and len(q4_car) > 1:
         t_stat, p_val = stats.ttest_ind(q1_car, q4_car)
-        print(f"\nQ1 (Transparent) vs Q4 (Opaque) CAR:")
-        print(f"  Q1 mean: {q1_car.mean():.2%}")
-        print(f"  Q4 mean: {q4_car.mean():.2%}")
-        print(f"  Difference: {q4_car.mean() - q1_car.mean():.2%}")
-        print(f"  t-stat: {t_stat:.2f}, p-value: {p_val:.4f}")
+        delta = (q4_car.mean() - q1_car.mean()) * 100
+        logger.info(
+            "Q1 vs Q4 CAR difference: %.2f%% (t=%.2f, p=%.4f)",
+            delta,
+            t_stat,
+            p_val,
+        )
+    else:
+        logger.warning("Not enough observations to run Q1 vs Q4 CAR test.")
 
-    # Correlation
-    corr, corr_p = stats.pearsonr(merged['CNOI'], merged['CAR'])
-    print(f"\nCNOI vs CAR Correlation: ρ = {corr:.3f} (p = {corr_p:.4f})")
+    corr, corr_p = stats.pearsonr(merged["CNOI"], merged["CAR"])
+    logger.info("CNOI vs CAR correlation %.3f (p=%.4f)", corr, corr_p)
 
     return summary
 
@@ -264,12 +264,12 @@ def run_event_study(
     returns_df: pd.DataFrame,
     market_returns: pd.Series,
     cnoi_df: pd.DataFrame,
-    estimation_start: str = '2023-01-01',
-    estimation_end: str = '2023-03-08',
-    event_start: str = '2023-03-09',
-    event_end: str = '2023-03-17',
-    pre_event_cutoff: str = '2023-03-01'
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    estimation_start: str = "2023-01-01",
+    estimation_end: str = "2023-03-08",
+    event_start: str = "2023-03-09",
+    event_end: str = "2023-03-17",
+    pre_event_cutoff: str = "2023-03-01",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Complete event study pipeline for SVB collapse.
 
@@ -293,68 +293,56 @@ def run_event_study(
         ...     cnoi_df
         ... )
     """
-    print("=" * 60)
-    print("SVB Collapse Event Study")
-    print("=" * 60)
-    print(f"Estimation window: {estimation_start} to {estimation_end}")
-    print(f"Event window: {event_start} to {event_end}")
+    validate_event_inputs(returns_df, market_returns)
+
+    logger.info("=" * 60)
+    logger.info("SVB Collapse Event Study")
+    logger.info("=" * 60)
+    logger.info("Estimation window: %s to %s", estimation_start, estimation_end)
+    logger.info("Event window: %s to %s", event_start, event_end)
 
     # Step 1: Estimate market model
-    print("\n[1/4] Estimating market model parameters...")
+    logger.info("[1/4] Estimating market model parameters...")
     params = compute_market_model_params(
-        returns_df,
-        market_returns,
-        estimation_start,
-        estimation_end
+        returns_df, market_returns, estimation_start, estimation_end
     )
-    print(f"  Estimated parameters for {len(params)} stocks")
+    logger.info("Estimated parameters for %s stocks", len(params))
 
     # Step 2: Compute abnormal returns
-    print("\n[2/4] Computing abnormal returns...")
-    ar_df = compute_abnormal_returns(
-        returns_df,
-        market_returns,
-        params,
-        event_start,
-        event_end
-    )
-    print(f"  Computed {len(ar_df)} abnormal return observations")
+    logger.info("[2/4] Computing abnormal returns...")
+    ar_df = compute_abnormal_returns(returns_df, market_returns, params, event_start, event_end)
+    logger.info("Computed %s abnormal return observations", len(ar_df))
 
     # Step 3: Compute CAR
-    print("\n[3/4] Computing cumulative abnormal returns (CAR)...")
+    logger.info("[3/4] Computing cumulative abnormal returns (CAR)...")
     car_df = compute_cumulative_abnormal_returns(ar_df)
-    print(f"  CAR computed for {len(car_df)} stocks")
-    print(f"  Mean CAR: {car_df['CAR'].mean():.2%}")
+    logger.info("CAR computed for %s stocks (mean %.2f%%)", len(car_df), car_df["CAR"].mean() * 100)
 
     # Step 4: Test CNOI relationship
-    print("\n[4/4] Testing CNOI vs CAR relationship...")
-    quartile_summary = test_cnoi_car_relationship(
-        car_df,
-        cnoi_df,
-        pre_event_cutoff
-    )
+    logger.info("[4/4] Testing CNOI vs CAR relationship...")
+    quartile_summary = test_cnoi_car_relationship(car_df, cnoi_df, pre_event_cutoff)
 
-    print("\n" + "=" * 60)
-    print("✓ Event study complete!")
+    logger.info("=" * 60)
+    logger.info("✓ Event study complete!")
 
     return quartile_summary, car_df
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Demo with simulated data
-    print("Event Study Demo (Simulated Data)\n")
+    logger.info("Event Study Demo (Simulated Data)")
 
     # Simulate market returns
     np.random.seed(42)
-    dates = pd.date_range('2023-01-01', '2023-03-31', freq='D')
+    dates = pd.date_range("2023-01-01", "2023-03-31", freq="D")
     market_ret = pd.Series(np.random.normal(0.0005, 0.015, len(dates)), index=dates)
 
     # SVB event: big negative market return
-    svb_dates = pd.date_range('2023-03-09', '2023-03-17', freq='D')
+    svb_dates = pd.date_range("2023-03-09", "2023-03-17", freq="D")
     market_ret.loc[svb_dates] = np.random.normal(-0.02, 0.03, len(svb_dates))
 
     # Simulate stock returns
-    tickers = [f'BANK{i:02d}' for i in range(20)]
+    tickers = [f"BANK{i:02d}" for i in range(20)]
     stock_data = []
 
     for ticker in tickers:
@@ -363,7 +351,7 @@ if __name__ == "__main__":
 
         for date in dates:
             ret = alpha + beta * market_ret.loc[date] + np.random.normal(0, 0.01)
-            stock_data.append({'ticker': ticker, 'date': date, 'return': ret})
+            stock_data.append({"ticker": ticker, "date": date, "return": ret})
 
     returns_df = pd.DataFrame(stock_data)
 
@@ -371,20 +359,13 @@ if __name__ == "__main__":
     cnoi_data = []
     for ticker in tickers:
         cnoi = np.random.uniform(8, 30)
-        cnoi_data.append({
-            'ticker': ticker,
-            'filing_date': pd.Timestamp('2023-02-15'),
-            'CNOI': cnoi
-        })
+        cnoi_data.append(
+            {"ticker": ticker, "filing_date": pd.Timestamp("2023-02-15"), "CNOI": cnoi}
+        )
 
     cnoi_df = pd.DataFrame(cnoi_data)
 
     # Run event study
-    summary, car = run_event_study(
-        returns_df,
-        market_ret,
-        cnoi_df
-    )
+    summary, car = run_event_study(returns_df, market_ret, cnoi_df)
 
-    print("\nQuartile Summary:")
-    print(summary.to_string(index=False))
+    logger.info("Quartile Summary:\n%s", summary.to_string(index=False))

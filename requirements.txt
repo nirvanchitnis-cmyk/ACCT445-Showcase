@@ -26,5 +26,6 @@ ipykernel>=6.25.0
 
 # Code quality (optional)
 pytest>=7.4.0
+pytest-cov>=4.1.0
 black>=23.0.0
 ruff>=0.1.0
