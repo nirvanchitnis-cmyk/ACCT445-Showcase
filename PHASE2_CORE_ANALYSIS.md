@@ -1,15 +1,16 @@
 # Phase 2: Core Analysis Modules
 
 **Phase**: 2 of 5
-**Estimated Time**: 30-40 hours
-**Dependencies**: Phase 1 complete (test infrastructure ready)
-**Status**: 🔴 Blocked (requires Phase 1)
+**Estimated Time**: 32-43 hours (includes SEC API fix)
+**Dependencies**: Phase 1 complete ✅ (test infrastructure ready)
+**Status**: 🟢 Ready to Start
 
 ---
 
 ## 🎯 Objectives
 
 Implement all missing analysis modules referenced in README:
+0. **`src/data/sec_api_client.py`**: Fix SEC API integration (retry logic, caching, User-Agent compliance) 🔧
 1. **`src/analysis/panel_regression.py`**: Panel econometrics (Fixed Effects, Fama-MacBeth, Driscoll-Kraay)
 2. **`src/analysis/dimension_analysis.py`**: CNOI dimension analysis (D, G, R, J, T, S, X)
 3. **`src/utils/performance_metrics.py`**: Portfolio performance metrics (Sharpe, Sortino, IR, etc.)
@@ -17,15 +18,261 @@ Implement all missing analysis modules referenced in README:
 5. Integrate with existing codebase seamlessly
 
 **Success Criteria**:
-- ✅ All 3 modules implemented with proper docstrings and type hints
-- ✅ >80% test coverage for all new code
+- ✅ SEC API integration working reliably (no 403 errors)
+- ✅ All 3 analysis modules implemented with proper docstrings and type hints
+- ✅ >80% test coverage for all new code (including SEC client)
 - ✅ CI/CD pipeline stays green
-- ✅ Demo sections work end-to-end
+- ✅ Demo sections work end-to-end (including CIK mapper)
 - ✅ Academic rigor maintained (proper econometric methods)
 
 ---
 
 ## 📋 Task Breakdown
+
+### Task 2.0: Fix SEC API Integration (2-3 hours) 🔧 PRIORITY
+
+**Why First**: Phase 1 identified SEC API 403 errors. Fix the data pipeline before implementing complex analysis modules.
+
+#### 2.0.1: Implement Robust SEC API Client
+
+**File**: `src/data/sec_api_client.py` (new file)
+
+```python
+"""
+Robust SEC EDGAR API client with retry logic and caching.
+
+Features:
+- Exponential backoff retry
+- User-Agent rotation
+- Disk caching
+- Rate limiting compliance
+"""
+
+import requests
+import time
+import json
+from pathlib import Path
+from typing import Dict, Optional
+import hashlib
+from src.utils.logger import get_logger
+from src.utils.exceptions import ExternalAPIError
+
+logger = get_logger(__name__)
+
+CACHE_DIR = Path("data/cache/sec")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# SEC requires descriptive User-Agent
+# See: https://www.sec.gov/os/accessing-edgar-data
+USER_AGENTS = [
+    "ACCT445-Research contact@university.edu",
+    "Academic-Research student@university.edu",
+]
+
+
+def fetch_sec_ticker_mapping(
+    use_cache: bool = True,
+    max_retries: int = 3
+) -> Dict[str, Dict]:
+    """
+    Fetch SEC company ticker mapping with retry logic.
+
+    Args:
+        use_cache: Use cached data if available
+        max_retries: Maximum retry attempts
+
+    Returns:
+        Dictionary mapping CIK to {ticker, title}
+
+    Raises:
+        ExternalAPIError: If all retries fail
+
+    Example:
+        >>> mapping = fetch_sec_ticker_mapping()
+        >>> print(mapping["0000070858"]["ticker"])  # "BAC"
+    """
+    cache_file = CACHE_DIR / "company_tickers.json"
+
+    # Check cache
+    if use_cache and cache_file.exists():
+        cache_age_hours = (time.time() - cache_file.stat().st_mtime) / 3600
+        if cache_age_hours < 24:  # Cache valid for 24 hours
+            logger.info(f"Loading SEC mapping from cache (age: {cache_age_hours:.1f}h)")
+            with open(cache_file, "r") as f:
+                return json.load(f)
+
+    # Fetch from SEC API with retries
+    url = "https://www.sec.gov/files/company_tickers.json"
+
+    for attempt in range(max_retries):
+        try:
+            headers = {
+                "User-Agent": USER_AGENTS[attempt % len(USER_AGENTS)],
+                "Accept": "application/json",
+            }
+
+            logger.info(f"Fetching SEC mapping (attempt {attempt + 1}/{max_retries})")
+
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Transform to CIK-indexed format
+            mapping = {}
+            for entry in data.values():
+                cik = str(entry["cik_str"]).zfill(10)
+                mapping[cik] = {
+                    "ticker": entry["ticker"],
+                    "title": entry["title"],
+                }
+
+            # Cache successful response
+            with open(cache_file, "w") as f:
+                json.dump(mapping, f)
+
+            logger.info(f"✓ SEC mapping fetched: {len(mapping)} companies")
+            return mapping
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 403:
+                logger.warning(f"SEC API 403 Forbidden (attempt {attempt + 1})")
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt  # Exponential backoff
+                    logger.info(f"Retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    raise ExternalAPIError(
+                        "SEC API returned 403 after all retries. "
+                        "Check User-Agent or use cached data."
+                    ) from e
+            else:
+                raise ExternalAPIError(f"SEC API HTTP error: {e}") from e
+
+        except Exception as e:
+            logger.error(f"Error fetching SEC mapping (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt
+                time.sleep(wait)
+            else:
+                raise ExternalAPIError("Failed to fetch SEC mapping") from e
+
+    raise ExternalAPIError("Failed to fetch SEC mapping after all retries")
+```
+
+#### 2.0.2: Update CIK Ticker Mapper
+
+**Modify**: `src/data/cik_ticker_mapper.py`
+
+Replace `fetch_sec_ticker_mapping()` function to use the new robust client:
+
+```python
+from src.data.sec_api_client import fetch_sec_ticker_mapping
+# Remove old implementation, use new client
+```
+
+#### 2.0.3: Write Tests
+
+**File**: `tests/test_sec_api_client.py`
+
+```python
+"""
+Tests for src/data/sec_api_client.py
+"""
+
+import pytest
+import requests
+from unittest.mock import patch, MagicMock
+from src.data.sec_api_client import fetch_sec_ticker_mapping
+from src.utils.exceptions import ExternalAPIError
+
+
+class TestFetchSecTickerMapping:
+    """Tests for SEC API client."""
+
+    @patch("src.data.sec_api_client.requests.get")
+    def test_fetch_success(self, mock_get):
+        """Test successful API fetch."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "0": {"cik_str": 70858, "ticker": "BAC", "title": "BANK OF AMERICA CORP"},
+            "1": {"cik_str": 19617, "ticker": "JPM", "title": "JPMORGAN CHASE"},
+        }
+        mock_get.return_value = mock_response
+
+        result = fetch_sec_ticker_mapping(use_cache=False)
+
+        assert "0000070858" in result
+        assert result["0000070858"]["ticker"] == "BAC"
+
+    @patch("src.data.sec_api_client.requests.get")
+    def test_retry_on_403(self, mock_get):
+        """Test retry logic on 403 error."""
+        # First attempt: 403
+        mock_response_403 = MagicMock()
+        mock_response_403.status_code = 403
+        mock_response_403.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            response=mock_response_403
+        )
+
+        # Second attempt: success
+        mock_response_200 = MagicMock()
+        mock_response_200.status_code = 200
+        mock_response_200.json.return_value = {
+            "0": {"cik_str": 70858, "ticker": "BAC", "title": "BANK OF AMERICA"}
+        }
+
+        mock_get.side_effect = [mock_response_403, mock_response_200]
+
+        result = fetch_sec_ticker_mapping(use_cache=False, max_retries=2)
+
+        assert "0000070858" in result
+        assert mock_get.call_count == 2
+
+    @patch("src.data.sec_api_client.requests.get")
+    def test_exhausted_retries(self, mock_get):
+        """Test that ExternalAPIError raised after all retries."""
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            response=mock_response
+        )
+        mock_get.return_value = mock_response
+
+        with pytest.raises(ExternalAPIError, match="403"):
+            fetch_sec_ticker_mapping(use_cache=False, max_retries=3)
+
+    def test_cache_usage(self, tmp_path, monkeypatch):
+        """Test that cache is used when available."""
+        # Create fake cache
+        cache_dir = tmp_path / "sec"
+        cache_dir.mkdir()
+        cache_file = cache_dir / "company_tickers.json"
+
+        import json
+        cached_data = {"0000070858": {"ticker": "BAC", "title": "Bank of America"}}
+        with open(cache_file, "w") as f:
+            json.dump(cached_data, f)
+
+        # Monkeypatch CACHE_DIR
+        import src.data.sec_api_client as sec_module
+        monkeypatch.setattr(sec_module, "CACHE_DIR", cache_dir)
+
+        result = fetch_sec_ticker_mapping(use_cache=True)
+
+        assert result == cached_data
+```
+
+#### 2.0.4: Update Existing Tests
+
+**Modify**: `tests/test_cik_ticker_mapper.py`
+
+Update to use the new client and ensure all mocks are compatible.
+
+**Checkpoint 2.0**: SEC API working reliably, tests passing, cached data working
+
+---
 
 ### Task 2.1: Implement `panel_regression.py` (12-15 hours)
 
