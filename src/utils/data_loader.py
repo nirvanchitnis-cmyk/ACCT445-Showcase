@@ -5,11 +5,16 @@ Lightweight data loading for CNOI scores and market returns.
 No large file dependencies - all data fetched on-demand.
 """
 
+from datetime import timedelta
+
 import pandas as pd
 import yfinance as yf
-from typing import List, Optional, Dict
-from datetime import datetime, timedelta
-import warnings
+
+from src.utils.exceptions import DataDownloadError, DataValidationError
+from src.utils.logger import get_logger
+from src.utils.validation import validate_cnoi_schema, validate_returns_schema
+
+logger = get_logger(__name__)
 
 
 def load_cnoi_data(filepath: str) -> pd.DataFrame:
@@ -28,27 +33,29 @@ def load_cnoi_data(filepath: str) -> pd.DataFrame:
     """
     df = pd.read_csv(filepath)
 
-    # Ensure filing_date is datetime
-    if 'filing_date' in df.columns:
-        df['filing_date'] = pd.to_datetime(df['filing_date'])
+    if "filing_date" in df.columns:
+        df["filing_date"] = pd.to_datetime(df["filing_date"])
 
-    # Derive quarter from filing_date
-    if 'filing_date' in df.columns and 'quarter' not in df.columns:
-        df['quarter'] = df['filing_date'].dt.to_period('Q')
+    if "filing_date" in df.columns and "quarter" not in df.columns:
+        df["quarter"] = df["filing_date"].dt.to_period("Q")
 
-    print(f"Loaded {len(df)} CNOI records from {filepath}")
-    print(f"  CIKs: {df['cik'].nunique()}")
-    print(f"  Date range: {df['filing_date'].min()} to {df['filing_date'].max()}")
-    print(f"  CNOI range: {df['CNOI'].min():.2f} to {df['CNOI'].max():.2f}")
+    validate_cnoi_schema(df)
+
+    logger.info("Loaded %s CNOI rows from %s", len(df), filepath)
+    logger.debug(
+        "CNOI summary — CIKs: %s, range: %s → %s, CNOI range %.2f → %.2f",
+        df["cik"].nunique(),
+        df["filing_date"].min(),
+        df["filing_date"].max(),
+        df["CNOI"].min(),
+        df["CNOI"].max(),
+    )
 
     return df
 
 
 def load_market_returns(
-    tickers: List[str],
-    start: str,
-    end: str,
-    frequency: str = 'daily'
+    tickers: list[str], start: str, end: str, frequency: str = "daily"
 ) -> pd.DataFrame:
     """
     Download stock returns from Yahoo Finance.
@@ -67,59 +74,112 @@ def load_market_returns(
         >>> returns = load_market_returns(tickers, '2023-01-01', '2025-11-01')
         >>> returns.head()
     """
-    print(f"Downloading {len(tickers)} tickers from {start} to {end}...")
+    if not tickers:
+        raise DataValidationError("Ticker list must contain at least one symbol.")
 
-    all_data = []
+    start_dt = pd.Timestamp(start)
+    end_dt = pd.Timestamp(end)
+    if start_dt >= end_dt:
+        raise DataValidationError("`start` must be earlier than `end`.")
 
-    for ticker in tickers:
-        try:
-            stock = yf.Ticker(ticker)
-            hist = stock.history(start=start, end=end)
+    logger.info(
+        "Downloading %s tickers from %s to %s",
+        len(tickers),
+        start_dt.date(),
+        end_dt.date(),
+    )
 
-            if len(hist) == 0:
-                warnings.warn(f"No data for {ticker}")
+    raw = yf.download(
+        tickers=tickers,
+        start=start_dt.strftime("%Y-%m-%d"),
+        end=end_dt.strftime("%Y-%m-%d"),
+        group_by="ticker",
+        progress=False,
+        threads=False,
+    )
+
+    if raw.empty:
+        raise DataDownloadError("yfinance returned an empty dataframe.")
+
+    def _prepare_frame(frame: pd.DataFrame, ticker: str) -> pd.DataFrame | None:
+        if frame.empty:
+            logger.warning("No data returned for %s", ticker)
+            return None
+
+        price_col = next(
+            (col for col in ("Adj Close", "Close") if col in frame.columns),
+            None,
+        )
+        if price_col is None:
+            logger.warning("Missing price column for %s", ticker)
+            return None
+
+        prices = frame[price_col].rename("price")
+        returns = prices.pct_change().rename("return")
+        volume = frame.get("Volume", pd.Series(index=frame.index, dtype=float)).rename("volume")
+
+        tidy = pd.DataFrame(
+            {
+                "date": frame.index,
+                "ticker": ticker,
+                "price": prices.values,
+                "return": returns.values,
+                "volume": volume.values,
+            }
+        ).dropna(subset=["return"])
+
+        return tidy
+
+    prepared_frames = []
+    if isinstance(raw.columns, pd.MultiIndex):
+        available = set(raw.columns.get_level_values(1))
+        for ticker in tickers:
+            if ticker not in available:
+                logger.warning("Ticker %s missing from download output", ticker)
                 continue
+            ticker_frame = raw.xs(ticker, axis=1, level=1)
+            prepared = _prepare_frame(ticker_frame, ticker)
+            if prepared is not None:
+                prepared_frames.append(prepared)
+    else:
+        ticker = tickers[0]
+        prepared = _prepare_frame(raw, ticker)
+        if prepared is not None:
+            prepared_frames.append(prepared)
 
-            # Calculate returns
-            hist['return'] = hist['Close'].pct_change()
-            hist['ticker'] = ticker
-            hist = hist.reset_index()
-            hist = hist.rename(columns={'Date': 'date', 'Close': 'price', 'Volume': 'volume'})
+    if not prepared_frames:
+        raise DataDownloadError("No ticker data was processed successfully.")
 
-            all_data.append(hist[['date', 'ticker', 'price', 'return', 'volume']])
+    df = pd.concat(prepared_frames, ignore_index=True)
 
-        except Exception as e:
-            warnings.warn(f"Error downloading {ticker}: {e}")
-            continue
+    if frequency in ("weekly", "monthly"):
+        rule = "W" if frequency == "weekly" else "M"
+        df = (
+            df.set_index("date")
+            .groupby("ticker")
+            .resample(rule)
+            .agg(
+                {
+                    "price": "last",
+                    "return": lambda x: (1 + x).prod() - 1,
+                    "volume": "sum",
+                }
+            )
+            .reset_index()
+        )
 
-    if len(all_data) == 0:
-        raise ValueError("No data downloaded successfully")
-
-    df = pd.concat(all_data, ignore_index=True)
-
-    # Resample if needed
-    if frequency == 'weekly':
-        df = df.set_index('date').groupby('ticker').resample('W').agg({
-            'price': 'last',
-            'return': lambda x: (1 + x).prod() - 1,
-            'volume': 'sum'
-        }).reset_index()
-    elif frequency == 'monthly':
-        df = df.set_index('date').groupby('ticker').resample('M').agg({
-            'price': 'last',
-            'return': lambda x: (1 + x).prod() - 1,
-            'volume': 'sum'
-        }).reset_index()
-
-    print(f"Downloaded {len(df)} observations for {df['ticker'].nunique()} tickers")
+    validate_returns_schema(df, required_columns=("date", "ticker", "return"))
+    logger.info(
+        "Downloaded %s observations spanning %s tickers",
+        len(df),
+        df["ticker"].nunique(),
+    )
 
     return df
 
 
 def compute_forward_returns(
-    returns_df: pd.DataFrame,
-    horizon: int = 1,
-    frequency: str = 'quarterly'
+    returns_df: pd.DataFrame, horizon: int = 1, frequency: str = "quarterly"
 ) -> pd.DataFrame:
     """
     Compute forward returns for backtesting.
@@ -136,32 +196,41 @@ def compute_forward_returns(
         >>> returns = load_market_returns(['WFC'], '2023-01-01', '2025-11-01')
         >>> fwd = compute_forward_returns(returns, horizon=1, frequency='quarterly')
     """
+    if horizon <= 0:
+        raise DataValidationError("`horizon` must be a positive integer.")
+
+    validate_returns_schema(returns_df, required_columns=("date", "ticker", "return"))
     df = returns_df.copy()
 
     # Resample to target frequency if needed
-    if frequency == 'quarterly':
-        df['period'] = pd.PeriodIndex(df['date'], freq='Q')
-        period_returns = df.groupby(['ticker', 'period'])['return'].apply(
-            lambda x: (1 + x).prod() - 1
-        ).reset_index()
-        period_returns = period_returns.rename(columns={'return': 'ret_period'})
+    if frequency == "quarterly":
+        df["period"] = pd.PeriodIndex(df["date"], freq="Q")
+        period_returns = (
+            df.groupby(["ticker", "period"])["return"]
+            .apply(lambda x: (1 + x).prod() - 1)
+            .reset_index()
+        )
+        period_returns = period_returns.rename(columns={"return": "ret_period"})
 
         # Compute forward returns
-        period_returns['ret_fwd'] = period_returns.groupby('ticker')['ret_period'].shift(-horizon)
+        period_returns["ret_fwd"] = period_returns.groupby("ticker")["ret_period"].shift(-horizon)
 
-        df = df.merge(period_returns[['ticker', 'period', 'ret_fwd']], on=['ticker', 'period'], how='left')
+        if "ret_fwd" in df.columns:
+            df = df.drop(columns=["ret_fwd"])
+
+        df = df.merge(
+            period_returns[["ticker", "period", "ret_fwd"]], on=["ticker", "period"], how="left"
+        )
 
     else:
         # For daily/weekly/monthly, simple shift
-        df['ret_fwd'] = df.groupby('ticker')['return'].shift(-horizon)
+        df["ret_fwd"] = df.groupby("ticker")["return"].shift(-horizon)
 
     return df
 
 
 def merge_cnoi_with_returns(
-    cnoi_df: pd.DataFrame,
-    returns_df: pd.DataFrame,
-    lag_days: int = 1
+    cnoi_df: pd.DataFrame, returns_df: pd.DataFrame, lag_days: int = 1
 ) -> pd.DataFrame:
     """
     Merge CNOI scores with forward returns.
@@ -182,38 +251,40 @@ def merge_cnoi_with_returns(
         >>> returns = load_market_returns(cnoi['ticker'].unique(), '2023-01-01', '2025-11-01')
         >>> merged = merge_cnoi_with_returns(cnoi, returns, lag_days=1)
     """
-    # Ensure tickers match
-    common_tickers = set(cnoi_df['ticker'].dropna()) & set(returns_df['ticker'])
-    print(f"Common tickers: {len(common_tickers)}")
+    if "ticker" not in cnoi_df.columns or "filing_date" not in cnoi_df.columns:
+        raise DataValidationError("CNOI dataframe must include `ticker` and `filing_date`.")
 
-    cnoi_sub = cnoi_df[cnoi_df['ticker'].isin(common_tickers)].copy()
-    returns_sub = returns_df[returns_df['ticker'].isin(common_tickers)].copy()
+    validate_returns_schema(returns_df, required_columns=("date", "ticker", "return"))
+
+    # Ensure tickers match
+    common_tickers = set(cnoi_df["ticker"].dropna()) & set(returns_df["ticker"])
+    logger.info("Found %s overlapping tickers between CNOI and returns", len(common_tickers))
+
+    cnoi_sub = cnoi_df[cnoi_df["ticker"].isin(common_tickers)].copy()
+    returns_sub = returns_df[returns_df["ticker"].isin(common_tickers)].copy()
 
     # Apply lag to filing_date
-    cnoi_sub['decision_date'] = cnoi_sub['filing_date'] + timedelta(days=lag_days)
+    cnoi_sub["decision_date"] = cnoi_sub["filing_date"] + timedelta(days=lag_days)
 
     # Merge on ticker + nearest date
     merged = pd.merge_asof(
-        cnoi_sub.sort_values('decision_date'),
-        returns_sub.sort_values('date'),
-        left_on='decision_date',
-        right_on='date',
-        by='ticker',
-        direction='forward',
-        tolerance=pd.Timedelta('30 days')
+        cnoi_sub.sort_values("decision_date"),
+        returns_sub.sort_values("date"),
+        left_on="decision_date",
+        right_on="date",
+        by="ticker",
+        direction="forward",
+        tolerance=pd.Timedelta("30 days"),
     )
 
-    print(f"Merged {len(merged)} observations")
-    print(f"  Missing returns: {merged['return'].isna().sum()}")
+    logger.info("Merged %s observations after lag alignment", len(merged))
+    logger.debug("Missing returns count: %s", merged["return"].isna().sum())
 
     return merged
 
 
 def create_sample_cnoi_file(
-    full_cnoi_path: str,
-    output_path: str,
-    n_top: int = 20,
-    n_bottom: int = 20
+    full_cnoi_path: str, output_path: str, n_top: int = 20, n_bottom: int = 20
 ) -> None:
     """
     Create lightweight sample CNOI file (top + bottom banks only).
@@ -235,45 +306,44 @@ def create_sample_cnoi_file(
     df = pd.read_csv(full_cnoi_path)
 
     # Get latest CNOI per bank
-    df['filing_date'] = pd.to_datetime(df['filing_date'])
-    latest = df.sort_values('filing_date').groupby('cik').last().reset_index()
+    df["filing_date"] = pd.to_datetime(df["filing_date"])
+    latest = df.sort_values("filing_date").groupby("cik").last().reset_index()
 
     # Top N (most transparent)
-    top = latest.nsmallest(n_top, 'CNOI')
+    top = latest.nsmallest(n_top, "CNOI")
 
     # Bottom N (most opaque)
-    bottom = latest.nlargest(n_bottom, 'CNOI')
+    bottom = latest.nlargest(n_bottom, "CNOI")
 
     # Combine
     sample = pd.concat([top, bottom])
 
     # Get all historical filings for these banks
-    sample_ciks = sample['cik'].unique()
-    full_sample = df[df['cik'].isin(sample_ciks)]
+    sample_ciks = sample["cik"].unique()
+    full_sample = df[df["cik"].isin(sample_ciks)]
 
     full_sample.to_csv(output_path, index=False)
-    print(f"Created sample CNOI file: {output_path}")
-    print(f"  Banks: {len(sample_ciks)}")
-    print(f"  Filings: {len(full_sample)}")
-    print(f"  File size: {len(full_sample) * 100 / len(df):.1f}% of original")
+    logger.info("Created sample CNOI file: %s", output_path)
+    logger.info(
+        "Sample coverage — Banks: %s, Filings: %s (%.1f%% of original)",
+        len(sample_ciks),
+        len(full_sample),
+        len(full_sample) * 100 / len(df),
+    )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Demo
-    print("=" * 60)
-    print("Data Loader Demo")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("Data Loader Demo")
+    logger.info("=" * 60)
 
     # Create sample file if full CNOI exists
     import os
-    full_path = '../../../ACCT445-Banks/out/cnoi_top100_20251101120954.csv'
+
+    full_path = "../../../ACCT445-Banks/out/cnoi_top100_20251101120954.csv"
     if os.path.exists(full_path):
-        create_sample_cnoi_file(
-            full_path,
-            'config/sample_cnoi.csv',
-            n_top=20,
-            n_bottom=20
-        )
+        create_sample_cnoi_file(full_path, "config/sample_cnoi.csv", n_top=20, n_bottom=20)
     else:
-        print(f"Full CNOI file not found: {full_path}")
-        print("Skipping sample creation")
+        logger.warning("Full CNOI file not found: %s", full_path)
+        logger.warning("Skipping sample creation")
