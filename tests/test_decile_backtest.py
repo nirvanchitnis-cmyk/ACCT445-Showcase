@@ -9,7 +9,6 @@ import pytest
 from src.analysis.decile_backtest import (
     assign_deciles,
     compute_decile_returns,
-    compute_long_short,
     newey_west_tstat,
     run_decile_backtest,
 )
@@ -117,3 +116,16 @@ class TestRunDecileBacktest:
                 score_col="CNOI",
                 return_col="ret_fwd",
             )
+
+    def test_weight_column_duplicates_handled(self, sample_decile_data: pd.DataFrame):
+        returns_df = sample_decile_data[["ticker", "date", "ret_fwd", "market_cap"]]
+        summary, ls = run_decile_backtest(
+            sample_decile_data,
+            returns_df,
+            score_col="CNOI",
+            return_col="ret_fwd",
+            n_deciles=4,
+            weight_col="market_cap",
+        )
+        assert len(summary) == 4
+        assert len(ls) == 1

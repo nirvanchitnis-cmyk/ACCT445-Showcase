@@ -148,9 +148,13 @@ def compute_abnormal_returns(
     ].copy()
 
     # Merge with market returns
-    event_df = event_df.merge(
-        market_returns.rename("market_return").reset_index(), on="date", how="inner"
+    market_df = (
+        market_returns.rename("market_return")
+        .to_frame()
+        .reset_index()
+        .rename(columns={"index": "date"})
     )
+    event_df = event_df.merge(market_df, on="date", how="inner")
 
     # Merge with params
     event_df = event_df.merge(params_df[["ticker", "alpha", "beta"]], on=ticker_col, how="inner")

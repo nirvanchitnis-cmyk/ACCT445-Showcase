@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,7 @@ def sample_cnoi_data(sample_cnoi_path: Path) -> pd.DataFrame:
 
 
 @pytest.fixture
-def mock_sec_ticker_json() -> Dict[str, Dict[str, str]]:
+def mock_sec_ticker_json() -> dict[str, dict[str, str]]:
     """Mock payload returned by the SEC ticker endpoint."""
     return {
         "0": {"cik_str": "70858", "ticker": "BAC", "title": "BANK OF AMERICA CORP /DE/"},
@@ -36,7 +35,7 @@ def mock_sec_ticker_json() -> Dict[str, Dict[str, str]]:
 
 
 @pytest.fixture
-def mock_sec_ticker_df(mock_sec_ticker_json: Dict[str, Dict[str, str]]) -> pd.DataFrame:
+def mock_sec_ticker_df(mock_sec_ticker_json: dict[str, dict[str, str]]) -> pd.DataFrame:
     """Mocked SEC mapping DataFrame for offline testing."""
     records = [
         {"cik": int(payload["cik_str"]), "ticker": payload["ticker"], "title": payload["title"]}

@@ -219,6 +219,19 @@ def run_decile_backtest(
         df = df.drop(columns=[return_col])
     df = df.merge(returns_df, on=["ticker", "date"], how="inner")
 
+    if weight_col:
+        x_col = f"{weight_col}_x"
+        y_col = f"{weight_col}_y"
+        if weight_col not in df.columns:
+            if x_col in df.columns:
+                df = df.rename(columns={x_col: weight_col})
+            elif y_col in df.columns:
+                df = df.rename(columns={y_col: weight_col})
+        # Drop any duplicate suffix column that might remain after rename.
+        for dup in (x_col, y_col):
+            if dup in df.columns and dup != weight_col:
+                df = df.drop(columns=[dup])
+
     # Compute decile returns
     decile_ret = compute_decile_returns(
         df, decile_col="decile", return_col=return_col, weight_col=weight_col

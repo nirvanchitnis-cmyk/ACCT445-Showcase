@@ -40,8 +40,9 @@ def fetch_sec_ticker_mapping(cache_path: str | None = None) -> pd.DataFrame:
 
     # SEC requires User-Agent header
     headers = {
-        "User-Agent": "ACCT445 Research Project (academic use)",
+        "User-Agent": "ACCT445-Showcase/1.0 (contact: nirvanchitnis@users.noreply.github.com)",
         "Accept-Encoding": "gzip, deflate",
+        "Accept": "application/json",
     }
 
     logger.info("Fetching SEC ticker mapping from %s", url)
@@ -177,13 +178,17 @@ def get_ticker_batch(ciks: list, rate_limit_delay: float = 0.1) -> dict[int, str
     return result
 
 
-if __name__ == "__main__":
+def _demo() -> None:  # pragma: no cover - convenience execution path
     logger.info("=" * 60)
     logger.info("SEC CIK → Ticker Mapping Demo")
     logger.info("=" * 60)
 
     # Fetch mapping
-    mapping = fetch_sec_ticker_mapping(cache_path="config/sec_ticker_mapping.csv")
+    try:
+        mapping = fetch_sec_ticker_mapping(cache_path="config/sec_ticker_mapping.csv")
+    except ExternalAPIError as exc:  # pragma: no cover - network failures
+        logger.error("Failed to fetch SEC mapping: %s", exc)
+        return
 
     # Test known banks
     test_ciks = {
@@ -200,3 +205,7 @@ if __name__ == "__main__":
         logger.info("CIK %s -> %s (%s)", cik, ticker, name)
 
     logger.info("✓ Mapping successful!")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    _demo()
