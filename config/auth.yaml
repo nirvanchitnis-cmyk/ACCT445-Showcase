@@ -1,0 +1,11 @@
+cookie:
+  expiry_days: 30
+  key: acct445_secret_key_change_me
+  name: acct445_auth_cookie
+credentials:
+  usernames:
+    admin:
+      name: Admin User
+      password: $2b$12$CU3O0LBitZd7WgNaTmXDquhGuhyrGiD7z77MBwtbp2Rj1XLtcJYHa
+preauthorized:
+  emails: []

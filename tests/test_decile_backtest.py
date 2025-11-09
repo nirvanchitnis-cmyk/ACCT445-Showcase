@@ -11,6 +11,7 @@ from src.analysis.decile_backtest import (
     compute_decile_returns,
     newey_west_tstat,
     run_decile_backtest,
+    run_factor_adjusted_backtest,
 )
 from src.utils.exceptions import DataValidationError
 
@@ -129,3 +130,97 @@ class TestRunDecileBacktest:
         )
         assert len(summary) == 4
         assert len(ls) == 1
+
+
+class TestFactorAdjustedBacktest:
+    """Tests for factor-adjusted backtest."""
+
+    @pytest.fixture
+    def mock_factors(self):
+        """Create mock factor data."""
+        np.random.seed(42)
+        dates = pd.date_range("2023-01-01", periods=60, freq="B")
+        data = {
+            "Mkt-RF": np.random.randn(60) * 0.01,
+            "SMB": np.random.randn(60) * 0.005,
+            "HML": np.random.randn(60) * 0.005,
+            "RMW": np.random.randn(60) * 0.003,
+            "CMA": np.random.randn(60) * 0.003,
+            "MOM": np.random.randn(60) * 0.008,
+            "RF": np.ones(60) * 0.00008,
+        }
+        return pd.DataFrame(data, index=dates)
+
+    def test_factor_adjusted_backtest_structure(
+        self, sample_decile_data: pd.DataFrame, mock_factors
+    ):
+        """Test factor-adjusted backtest returns correct structure."""
+        results = run_factor_adjusted_backtest(
+            sample_decile_data,
+            sample_decile_data,
+            mock_factors,
+            score_col="CNOI",
+            return_col="ret_fwd",
+            model="FF5",
+        )
+
+        assert "raw_returns" in results
+        assert "factor_adjusted" in results
+        assert "decile_alphas" in results["factor_adjusted"]
+        assert "LS_alpha" in results["factor_adjusted"]
+        assert "LS_alpha_tstat" in results["factor_adjusted"]
+
+    def test_factor_adjusted_alphas_returned(self, sample_decile_data: pd.DataFrame, mock_factors):
+        """Test that alphas are computed for each decile."""
+        results = run_factor_adjusted_backtest(
+            sample_decile_data,
+            sample_decile_data,
+            mock_factors,
+            score_col="CNOI",
+            return_col="ret_fwd",
+            n_deciles=5,
+            model="FF5",
+        )
+
+        decile_alphas = results["factor_adjusted"]["decile_alphas"]
+        assert len(decile_alphas) == 5
+        assert "alpha_annual" in decile_alphas.columns
+        assert "t_stat" in decile_alphas.columns
+
+    def test_factor_adjusted_with_ff3(self, sample_decile_data: pd.DataFrame, mock_factors):
+        """Test factor-adjusted backtest with FF3 model."""
+        results = run_factor_adjusted_backtest(
+            sample_decile_data,
+            sample_decile_data,
+            mock_factors,
+            model="FF3",
+        )
+
+        assert results["factor_adjusted"]["model"] == "FF3"
+
+    def test_factor_adjusted_with_carhart(self, sample_decile_data: pd.DataFrame, mock_factors):
+        """Test factor-adjusted backtest with Carhart (FF5_MOM)."""
+        results = run_factor_adjusted_backtest(
+            sample_decile_data,
+            sample_decile_data,
+            mock_factors,
+            model="FF5_MOM",
+        )
+
+        assert results["factor_adjusted"]["model"] == "FF5_MOM"
+
+    def test_long_short_alpha_computed(self, sample_decile_data: pd.DataFrame, mock_factors):
+        """Test that long-short alpha is computed."""
+        results = run_factor_adjusted_backtest(
+            sample_decile_data,
+            sample_decile_data,
+            mock_factors,
+            n_deciles=10,
+        )
+
+        ls_alpha = results["factor_adjusted"]["LS_alpha"]
+        ls_tstat = results["factor_adjusted"]["LS_alpha_tstat"]
+
+        # Check types (may be NaN if insufficient data overlap)
+        assert isinstance(ls_alpha, (int, float, np.number))
+        assert isinstance(ls_tstat, (int, float, np.number))

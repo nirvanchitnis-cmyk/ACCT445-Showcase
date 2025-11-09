@@ -38,8 +38,10 @@ bootstrap_confidence = 0.95
 
 [runner]
 schedule_time = "18:00"
+run_on_startup = true
 lookback_days = 365
 anomaly_tstat_threshold = 1.0
+enable_parallel_fetch = true
 
 [alerts]
 enable_email = false

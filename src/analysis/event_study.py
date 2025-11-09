@@ -273,7 +273,8 @@ def run_event_study(
     event_start: str = "2023-03-09",
     event_end: str = "2023-03-17",
     pre_event_cutoff: str = "2023-03-01",
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+    use_robust_tests: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame] | dict:
     """
     Complete event study pipeline for SVB collapse.
 
@@ -286,9 +287,18 @@ def run_event_study(
         event_start: Event window start (SVB collapse)
         event_end: Event window end
         pre_event_cutoff: Use CNOI scores before this date
+        use_robust_tests: If True, include BMP, Corrado, and Sign tests
 
     Returns:
-        (car_by_quartile, individual_car) DataFrames
+        If use_robust_tests=False:
+            (car_by_quartile, individual_car) DataFrames
+        If use_robust_tests=True:
+            {
+                'quartile_summary': DataFrame,
+                'car_df': DataFrame,
+                'robust_tests': DataFrame with BMP/Corrado/Sign results,
+                'ar_matrix': DataFrame (for further analysis)
+            }
 
     Example:
         >>> summary, car_df = run_event_study(
@@ -296,6 +306,14 @@ def run_event_study(
         ...     sp500_returns,
         ...     cnoi_df
         ... )
+        >>> # With robust tests:
+        >>> results = run_event_study(
+        ...     returns_df,
+        ...     sp500_returns,
+        ...     cnoi_df,
+        ...     use_robust_tests=True
+        ... )
+        >>> print(results['robust_tests'])
     """
     validate_event_inputs(returns_df, market_returns)
 
@@ -325,6 +343,42 @@ def run_event_study(
     # Step 4: Test CNOI relationship
     logger.info("[4/4] Testing CNOI vs CAR relationship...")
     quartile_summary = test_cnoi_car_relationship(car_df, cnoi_df, pre_event_cutoff)
+
+    # Step 5: Robust tests (optional)
+    if use_robust_tests:
+        logger.info("[5/5] Running robust event tests (BMP, Corrado, Sign)...")
+
+        try:
+            from src.analysis.event_study_advanced.robust_tests import run_all_event_tests
+
+            # Convert ar_df to matrix format (rows = days, cols = stocks)
+            ar_matrix = ar_df.pivot(index="date", columns="ticker", values="abnormal_return")
+
+            # Get estimation window ARs
+            est_ar_df = compute_abnormal_returns(
+                returns_df, market_returns, params, estimation_start, estimation_end
+            )
+            est_ar_matrix = est_ar_df.pivot(
+                index="date", columns="ticker", values="abnormal_return"
+            )
+
+            # Run robust tests on first event day
+            robust_results = run_all_event_tests(ar_matrix, est_ar_matrix, event_idx=0)
+
+            logger.info("=" * 60)
+            logger.info("✓ Event study with robust tests complete!")
+
+            return {
+                "quartile_summary": quartile_summary,
+                "car_df": car_df,
+                "robust_tests": robust_results,
+                "ar_matrix": ar_matrix,
+                "estimation_ar_matrix": est_ar_matrix,
+            }
+
+        except ImportError as e:
+            logger.warning("Could not import robust tests: %s", str(e))
+            logger.warning("Returning standard results without robust tests")
 
     logger.info("=" * 60)
     logger.info("✓ Event study complete!")

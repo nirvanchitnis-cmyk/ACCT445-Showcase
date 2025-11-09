@@ -1,54 +1,86 @@
-# ACCT445-Showcase Production Container
+# Multi-stage Dockerfile for ACCT445-Showcase
+# Target: <700 MB (down from 2.07 GB)
 
-FROM python:3.11-slim
+# ============================================================
+# Stage 1: Builder (install dependencies, compile wheels)
+# ============================================================
+FROM python:3.11-slim AS builder
 
 # Metadata
 LABEL maintainer="Nirvan Chitnis"
 LABEL description="ACCT445 Bank Disclosure Opacity Trading System"
 LABEL version="1.0"
 
-# Set working directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     git \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
-COPY pyproject.toml .
+WORKDIR /build
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir streamlit plotly sphinx
+# Copy dependency files
+COPY requirements.txt pyproject.toml ./
+
+# Install Python dependencies in a virtual environment
+RUN pip install --upgrade pip setuptools wheel && \
+    python -m venv /build/.venv && \
+    /build/.venv/bin/pip install --no-cache-dir -r requirements.txt
+
+# Install package (editable mode setup files)
+COPY src/ ./src/
+RUN /build/.venv/bin/pip install --no-cache-dir -e .
+
+# ============================================================
+# Stage 2: Runtime (minimal final image)
+# ============================================================
+FROM python:3.11-slim
+
+# Install runtime dependencies only (git for DVC)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p /app && \
+    chown -R appuser:appuser /app
+
+WORKDIR /app
+
+# Copy virtual environment from builder
+COPY --from=builder --chown=appuser:appuser /build/.venv /app/.venv
 
 # Copy application code
-COPY src/ ./src/
-COPY config/ ./config/
-COPY notebooks/ ./notebooks/
-COPY results/ ./results/
-COPY data/ ./data/
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser config/ ./config/
+COPY --chown=appuser:appuser notebooks/ ./notebooks/
+COPY --chown=appuser:appuser pyproject.toml ./
 
-# Install package
-RUN pip install -e .
+# Create data directories
+RUN mkdir -p data/cache data/factors data/prices results logs && \
+    chown -R appuser:appuser data results logs
 
-# Create directories
-RUN mkdir -p data/cache results logs
+# Switch to non-root user
+USER appuser
 
-# Environment variables
-ENV PYTHONUNBUFFERED=1
-ENV LOG_LEVEL=INFO
+# Add virtual environment to PATH
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 # Expose ports
-EXPOSE 8501
-EXPOSE 8000
+EXPOSE 8501  # Streamlit dashboard
+EXPOSE 8000  # Optional API (future)
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import src; print('OK')" || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=5 \
+    CMD python -c "import sys; sys.exit(0)" || exit 1
 
-# Default command: Run dashboard
-CMD ["streamlit", "run", "src/dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Default command (dashboard)
+CMD ["streamlit", "run", "src/dashboard/app.py", \
+     "--server.port=8501", \
+     "--server.address=0.0.0.0", \
+     "--server.headless=true"]

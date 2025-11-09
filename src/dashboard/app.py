@@ -11,6 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.dashboard.auth import authenticate
 from src.utils.config import get_config_value
 from src.utils.performance_metrics import (
     conditional_var,
@@ -237,8 +238,15 @@ def _display_data_quality(data: dict[str, pd.DataFrame | None]) -> None:
 
 def main() -> None:
     """Entry point for Streamlit."""
+    # Authentication gate
+    name, authentication_status, username = authenticate()
+
+    if not authentication_status:
+        st.stop()  # Stop execution if not authenticated
+
     st.sidebar.title("📊 ACCT445 Showcase")
     st.sidebar.markdown("Bank Disclosure Opacity Trading System")
+    st.sidebar.success(f"Welcome, {name}!")
     st.sidebar.markdown("---")
     page = st.sidebar.radio(
         "Navigation",

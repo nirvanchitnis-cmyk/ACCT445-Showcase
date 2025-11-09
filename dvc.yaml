@@ -1,0 +1,68 @@
+# DVC pipeline for reproducible data processing
+
+stages:
+  # Stage 1: Download Fama-French factors
+  fetch_factors:
+    cmd: python -m src.utils.factor_data --output data/factors/ff5_momentum_daily.csv
+    deps:
+      - src/utils/factor_data.py
+    outs:
+      - data/factors/ff5_momentum_daily.csv
+    desc: "Fetch FF5 + Momentum factors from Ken French library"
+
+  # Stage 2: Fetch market data (yfinance)
+  fetch_prices:
+    cmd: python -m src.data.market_data --tickers config/sample_cnoi.csv --output data/prices/daily_prices.parquet
+    deps:
+      - src/data/market_data.py
+      - config/sample_cnoi.csv
+    outs:
+      - data/prices/daily_prices.parquet
+    desc: "Fetch stock prices for all banks in sample"
+
+  # Stage 3: Run decile backtest
+  decile_backtest:
+    cmd: python -m src.analysis.decile_backtest --cnoi config/sample_cnoi.csv --prices data/prices/daily_prices.parquet --factors data/factors/ff5_momentum_daily.csv --output results/
+    deps:
+      - src/analysis/decile_backtest.py
+      - config/sample_cnoi.csv
+      - data/prices/daily_prices.parquet
+      - data/factors/ff5_momentum_daily.csv
+    outs:
+      - results/decile_summary_latest.csv
+      - results/decile_long_short_latest.csv
+      - results/decile_alphas_ff5.csv
+    desc: "Run decile backtest with factor-adjusted returns"
+
+  # Stage 4: Event study
+  event_study:
+    cmd: python -m src.analysis.event_study --cnoi config/sample_cnoi.csv --prices data/prices/daily_prices.parquet --event-date 2023-03-10 --output results/
+    deps:
+      - src/analysis/event_study.py
+      - config/sample_cnoi.csv
+      - data/prices/daily_prices.parquet
+    outs:
+      - results/event_study_results.csv
+      - results/robust_event_tests_svb.csv
+    desc: "Run event study (SVB crisis) with robust tests"
+
+  # Stage 5: DiD analysis
+  did_analysis:
+    cmd: python -m src.analysis.causal_inference.difference_in_differences --panel data/panel_cnoi_returns.csv --output results/
+    deps:
+      - src/analysis/causal_inference/difference_in_differences.py
+      - data/panel_cnoi_returns.csv
+    outs:
+      - results/did_cecl_adoption.csv
+    desc: "Difference-in-differences analysis of CECL adoption"
+
+  # Stage 6: Opacity benchmarking
+  opacity_validation:
+    cmd: python -m src.analysis.opacity_benchmarking.opacity_validation --cnoi config/sample_cnoi.csv --output results/
+    deps:
+      - src/analysis/opacity_benchmarking/opacity_validation.py
+      - config/sample_cnoi.csv
+    outs:
+      - results/opacity_benchmark_correlations.csv
+      - results/cnoi_validation_horserace.csv
+    desc: "Validate CNOI against readability metrics"

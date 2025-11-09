@@ -70,13 +70,32 @@ def fixed_effects_regression(
     independent_vars: list[str] | None = None,
     entity_effects: bool = True,
     time_effects: bool = True,
+    factor_cols: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Run Fixed-Effects regression using linearmodels.PanelOLS."""
+    """
+    Run Fixed-Effects regression using linearmodels.PanelOLS.
+
+    Args:
+        df: Panel DataFrame (MultiIndex: entity, time)
+        dependent_var: Dependent variable column name
+        independent_vars: Independent variable column names
+        entity_effects: Include entity fixed effects
+        time_effects: Include time fixed effects
+        factor_cols: Optional factor control columns (e.g., ['Mkt-RF', 'SMB', 'HML'])
+
+    Returns:
+        Dictionary with regression results
+    """
 
     if independent_vars is None:
         independent_vars = ["CNOI"]
 
-    required_cols = [dependent_var] + independent_vars
+    # Combine independent vars with factor controls
+    all_x_vars = independent_vars.copy()
+    if factor_cols:
+        all_x_vars.extend([col for col in factor_cols if col not in all_x_vars])
+
+    required_cols = [dependent_var] + all_x_vars
     _validate_columns(df, required_cols)
 
     if not isinstance(df.index, pd.MultiIndex):
@@ -86,12 +105,13 @@ def fixed_effects_regression(
 
     clean = _drop_na(df, required_cols)
     y = clean[dependent_var]
-    X = clean[independent_vars]
+    X = clean[all_x_vars]
 
     logger.info(
-        "Running fixed effects regression (%s obs, %s vars)",
+        "Running fixed effects regression (%s obs, %s vars, factors=%s)",
         len(clean),
-        len(independent_vars),
+        len(all_x_vars),
+        factor_cols is not None,
     )
 
     model = PanelOLS(y, X, entity_effects=entity_effects, time_effects=time_effects)
@@ -118,6 +138,7 @@ def fixed_effects_regression(
         "r_squared": results.rsquared,
         "n_obs": results.nobs,
         "effects": effects,
+        "factor_controls": factor_cols,
         "model": results,
     }
 

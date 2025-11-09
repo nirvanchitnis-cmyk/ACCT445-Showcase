@@ -1,41 +1,65 @@
 version: '3.8'
 
 services:
-  acct445-app:
-    build: .
-    container_name: acct445-showcase
+  acct445-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acct445-dashboard
     ports:
       - "8501:8501"
     volumes:
-      - ./data:/app/data
-      - ./results:/app/results
-      - ./logs:/app/logs
-      - ./config:/app/config
+      - ./data:/app/data:rw
+      - ./results:/app/results:rw
+      - ./logs:/app/logs:rw
+      - ./config:/app/config:ro
     environment:
+      - TZ=America/New_York
       - LOG_LEVEL=INFO
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      backtest-runner:
+        condition: service_healthy
+    networks:
+      - acct445-net
 
   backtest-runner:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: acct445-runner
     volumes:
-      - ./data:/app/data
-      - ./results:/app/results
-      - ./logs:/app/logs
-      - ./config:/app/config
+      - ./data:/app/data:rw
+      - ./results:/app/results:rw
+      - ./logs:/app/logs:rw
+      - ./config:/app/config:ro
+      - runner-locks:/tmp:rw  # For job locks
     environment:
+      - TZ=America/New_York
       - LOG_LEVEL=INFO
       - PYTHONUNBUFFERED=1
-    command: python src/runner/daily_backtest.py
+    command: ["python", "-m", "src.runner.scheduler"]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import importlib; importlib.import_module('src.runner.daily_backtest')"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - acct445-net
+
+volumes:
+  runner-locks:
+    driver: local
+
+networks:
+  acct445-net:
+    driver: bridge

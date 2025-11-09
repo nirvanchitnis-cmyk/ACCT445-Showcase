@@ -16,6 +16,24 @@ from src.analysis.panel_regression import (
 from src.utils.exceptions import DataValidationError
 
 
+@pytest.fixture
+def mock_factors_panel():
+    """Create mock factor data for panel tests."""
+    np.random.seed(42)
+    quarters = pd.period_range("2023Q1", periods=8, freq="Q")
+    data = []
+    for quarter in quarters:
+        data.append(
+            {
+                "quarter": quarter,
+                "Mkt-RF": np.random.randn() * 0.01,
+                "SMB": np.random.randn() * 0.005,
+                "HML": np.random.randn() * 0.005,
+            }
+        )
+    return pd.DataFrame(data)
+
+
 class TestPreparePanelData:
     """Tests for prepare_panel_data."""
 
@@ -113,3 +131,68 @@ class TestRunAllPanelRegressions:
 
         assert np.sign(fe) == np.sign(dk)
         assert np.sign(fe) == np.sign(fm) or abs(fm) < 1e-3
+
+
+class TestFactorControls:
+    """Tests for factor controls in panel regressions."""
+
+    def test_fe_with_factor_controls(
+        self, sample_panel_data: pd.DataFrame, mock_factors_panel
+    ) -> None:
+        """Test fixed effects regression with factor controls."""
+        # Merge factors into panel data
+        merged = sample_panel_data.merge(mock_factors_panel, on="quarter", how="inner")
+
+        # Ensure we have data after merge
+        if len(merged) == 0:
+            pytest.skip("No overlapping data between sample and factors")
+
+        panel_df = prepare_panel_data(merged)
+
+        results = fixed_effects_regression(
+            panel_df,
+            independent_vars=["CNOI"],
+            factor_cols=["Mkt-RF", "SMB", "HML"],
+        )
+
+        assert "coefficients" in results
+        assert "CNOI" in results["coefficients"]
+        assert "Mkt-RF" in results["coefficients"]
+        assert "SMB" in results["coefficients"]
+        assert "HML" in results["coefficients"]
+        assert results["factor_controls"] == ["Mkt-RF", "SMB", "HML"]
+
+    def test_fe_factor_controls_optional(self, sample_panel_data: pd.DataFrame) -> None:
+        """Test that factor controls are optional."""
+        panel_df = prepare_panel_data(sample_panel_data)
+
+        results = fixed_effects_regression(
+            panel_df,
+            independent_vars=["CNOI"],
+            factor_cols=None,
+        )
+
+        assert "CNOI" in results["coefficients"]
+        assert results["factor_controls"] is None
+
+    def test_fe_factor_controls_no_duplicates(
+        self, sample_panel_data: pd.DataFrame, mock_factors_panel
+    ) -> None:
+        """Test that duplicate columns are not added."""
+        merged = sample_panel_data.merge(mock_factors_panel, on="quarter", how="inner")
+
+        # Ensure we have data after merge
+        if len(merged) == 0:
+            pytest.skip("No overlapping data between sample and factors")
+
+        panel_df = prepare_panel_data(merged)
+
+        results = fixed_effects_regression(
+            panel_df,
+            independent_vars=["CNOI", "Mkt-RF"],  # Mkt-RF in both lists
+            factor_cols=["Mkt-RF", "SMB"],
+        )
+
+        # Should not have duplicate Mkt-RF
+        assert "Mkt-RF" in results["coefficients"]
+        assert "SMB" in results["coefficients"]

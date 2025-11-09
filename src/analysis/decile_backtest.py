@@ -288,6 +288,130 @@ def run_decile_backtest(
     return summary_df, ls_summary
 
 
+def run_factor_adjusted_backtest(
+    cnoi_df: pd.DataFrame,
+    returns_df: pd.DataFrame,
+    factors_df: pd.DataFrame,
+    score_col: str = "CNOI",
+    return_col: str = "ret_fwd",
+    n_deciles: int | None = None,
+    weight_col: str | None = None,
+    model: str = "FF5_MOM",
+    lags: int = 3,
+) -> dict:
+    """
+    Run decile backtest with factor-adjusted returns.
+
+    Args:
+        cnoi_df: DataFrame with CNOI scores
+        returns_df: DataFrame with forward returns
+        factors_df: DataFrame with Fama-French factors
+        score_col: Column to rank on (default: 'CNOI')
+        return_col: Return column (default: 'ret_fwd')
+        n_deciles: Number of groups (default: 10)
+        weight_col: Optional value-weighting column
+        model: Factor model ("FF3", "FF5", "FF5_MOM")
+        lags: Newey-West lags
+
+    Returns:
+        {
+            'raw_returns': {...},  # Raw backtest results
+            'factor_adjusted': {
+                'decile_alphas': DataFrame,  # Alpha by decile
+                'D1_alpha': float,
+                'D10_alpha': float,
+                'LS_alpha': float,  # Long-short alpha
+                'LS_alpha_tstat': float,
+                'model': str
+            }
+        }
+
+    Example:
+        >>> results = run_factor_adjusted_backtest(cnoi_df, returns_df, factors_df)
+        >>> results['factor_adjusted']['LS_alpha']  # Long-short alpha
+    """
+    from src.analysis.factor_models.alpha_decomposition import (
+        long_short_alpha,
+        summarize_decile_alphas,
+    )
+
+    # Run standard backtest first
+    summary_df, ls_summary = run_decile_backtest(
+        cnoi_df=cnoi_df,
+        returns_df=returns_df,
+        score_col=score_col,
+        return_col=return_col,
+        n_deciles=n_deciles,
+        weight_col=weight_col,
+        lags=lags,
+    )
+
+    # Get actual n_deciles used
+    n_deciles = n_deciles or int(get_config_value("backtest.n_deciles", 10))
+
+    # Assign deciles and merge with returns
+    df = assign_deciles(cnoi_df, score_col, n_groups=n_deciles, ascending=True)
+    if return_col in df.columns:
+        df = df.drop(columns=[return_col])
+    df = df.merge(returns_df, on=["ticker", "date"], how="inner")
+
+    # Handle weight column duplicates
+    if weight_col:
+        x_col = f"{weight_col}_x"
+        y_col = f"{weight_col}_y"
+        if weight_col not in df.columns:
+            if x_col in df.columns:
+                df = df.rename(columns={x_col: weight_col})
+            elif y_col in df.columns:
+                df = df.rename(columns={y_col: weight_col})
+        for dup in (x_col, y_col):
+            if dup in df.columns and dup != weight_col:
+                df = df.drop(columns=[dup])
+
+    # Compute decile returns
+    decile_ret = compute_decile_returns(
+        df, decile_col="decile", return_col=return_col, weight_col=weight_col
+    )
+
+    # Compute alphas for each decile
+    decile_alphas = summarize_decile_alphas(
+        decile_ret, factors_df, decile_col="decile", return_col=return_col, model=model
+    )
+
+    # Long-short alpha
+    d1_returns = decile_ret[decile_ret["decile"] == 1].set_index("date")[return_col]
+    d10_returns = decile_ret[decile_ret["decile"] == n_deciles].set_index("date")[return_col]
+
+    ls_alpha_result = long_short_alpha(d1_returns, d10_returns, factors_df, model=model)
+
+    # Extract D1 and D10 alphas
+    d1_alpha = decile_alphas[decile_alphas["decile"] == 1]["alpha_annual"].values[0]
+    d10_alpha = decile_alphas[decile_alphas["decile"] == n_deciles]["alpha_annual"].values[0]
+
+    factor_adjusted = {
+        "decile_alphas": decile_alphas,
+        "D1_alpha": d1_alpha,
+        "D10_alpha": d10_alpha,
+        "LS_alpha": ls_alpha_result["alpha_annual"],
+        "LS_alpha_tstat": ls_alpha_result["t_stat"],
+        "LS_alpha_pvalue": ls_alpha_result["p_value"],
+        "model": model,
+    }
+
+    logger.info(
+        "Factor-adjusted backtest (%s): LS alpha = %.2f%% (t=%.2f, p=%.4f)",
+        model,
+        ls_alpha_result["alpha_annual"] * 100,
+        ls_alpha_result["t_stat"],
+        ls_alpha_result["p_value"],
+    )
+
+    return {
+        "raw_returns": {"summary": summary_df, "long_short": ls_summary},
+        "factor_adjusted": factor_adjusted,
+    }
+
+
 if __name__ == "__main__":  # pragma: no cover
     # Demo with simulated data
     logger.info("=" * 60)

@@ -141,3 +141,97 @@ class TestRunEventStudy:
         )
 
         assert not summary.empty
+
+
+class TestRobustEventTests:
+    """Tests for robust event study tests integration."""
+
+    def test_run_event_study_with_robust_tests(
+        self, sample_event_study_returns, sample_market_returns
+    ):
+        """Test that run_event_study works with use_robust_tests=True."""
+        cnoi = pd.DataFrame(
+            {
+                "ticker": sample_event_study_returns["ticker"].unique(),
+                "filing_date": pd.to_datetime("2023-02-01"),
+                "CNOI": [10 + i for i in range(len(sample_event_study_returns["ticker"].unique()))],
+            }
+        )
+
+        results = event_study.run_event_study(
+            sample_event_study_returns,
+            sample_market_returns,
+            cnoi,
+            estimation_start="2023-01-01",
+            estimation_end="2023-02-28",
+            event_start="2023-03-01",
+            event_end="2023-03-15",
+            pre_event_cutoff="2023-02-15",
+            use_robust_tests=True,
+        )
+
+        # Should return a dict
+        assert isinstance(results, dict)
+        assert "quartile_summary" in results
+        assert "car_df" in results
+        assert "robust_tests" in results
+
+    def test_robust_tests_dataframe_structure(
+        self, sample_event_study_returns, sample_market_returns
+    ):
+        """Test that robust_tests DataFrame has correct structure."""
+        cnoi = pd.DataFrame(
+            {
+                "ticker": sample_event_study_returns["ticker"].unique(),
+                "filing_date": pd.to_datetime("2023-02-01"),
+                "CNOI": [10 + i for i in range(len(sample_event_study_returns["ticker"].unique()))],
+            }
+        )
+
+        results = event_study.run_event_study(
+            sample_event_study_returns,
+            sample_market_returns,
+            cnoi,
+            estimation_start="2023-01-01",
+            estimation_end="2023-02-28",
+            event_start="2023-03-01",
+            event_end="2023-03-15",
+            pre_event_cutoff="2023-02-15",
+            use_robust_tests=True,
+        )
+
+        robust_tests = results["robust_tests"]
+
+        # Should have 3 rows (BMP, Corrado, Sign)
+        assert len(robust_tests) == 3
+
+        # Should have required columns
+        assert "Test" in robust_tests.columns
+        assert "Statistic" in robust_tests.columns
+        assert "p-value" in robust_tests.columns
+
+    def test_backward_compatibility(self, sample_event_study_returns, sample_market_returns):
+        """Test that default behavior (use_robust_tests=False) still works."""
+        cnoi = pd.DataFrame(
+            {
+                "ticker": sample_event_study_returns["ticker"].unique(),
+                "filing_date": pd.to_datetime("2023-02-01"),
+                "CNOI": [10 + i for i in range(len(sample_event_study_returns["ticker"].unique()))],
+            }
+        )
+
+        summary, car = event_study.run_event_study(
+            sample_event_study_returns,
+            sample_market_returns,
+            cnoi,
+            estimation_start="2023-01-01",
+            estimation_end="2023-02-28",
+            event_start="2023-03-01",
+            event_end="2023-03-15",
+            pre_event_cutoff="2023-02-15",
+            use_robust_tests=False,
+        )
+
+        # Should return tuple as before
+        assert isinstance(summary, pd.DataFrame)
+        assert isinstance(car, pd.DataFrame)
