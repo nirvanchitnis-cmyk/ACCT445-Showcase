@@ -4,8 +4,13 @@ Causal Inference Modules
 Includes:
 - Difference-in-Differences estimation
 - Parallel trends testing
+- Wild cluster bootstrap for few-cluster inference
 """
 
+from src.analysis.causal_inference.did_bootstrap import (
+    compute_effective_clusters,
+    wild_cluster_bootstrap,
+)
 from src.analysis.causal_inference.difference_in_differences import (
     did_summary_table,
     prepare_did_data,
@@ -24,4 +29,6 @@ __all__ = [
     "check_parallel_trends",
     "plot_parallel_trends",
     "placebo_test",
+    "wild_cluster_bootstrap",
+    "compute_effective_clusters",
 ]

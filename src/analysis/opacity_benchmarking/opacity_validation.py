@@ -501,3 +501,85 @@ def compute_partial_correlations(
         "zero_order_corr_x2": r_yx2,
         "corr_x1_x2": r_x1x2,
     }
+
+
+def intraclass_correlation_coefficient(
+    data: pd.DataFrame,
+    subject_col: str,
+    measure_col: str,
+    score_col: str,
+    icc_type: str = "ICC(2,1)",
+) -> dict:
+    """Compute ICC for test-retest reliability (CNOI Stability dimension)."""
+    from scipy import stats as sp_stats
+
+    pivot = data.pivot_table(
+        index=subject_col, columns=measure_col, values=score_col, aggfunc="mean"
+    ).dropna()
+
+    if len(pivot) < 2:
+        raise ValueError("Need >= 2 subjects")
+
+    n_subjects, n_measures = pivot.shape
+    if n_measures < 2:
+        raise ValueError("Need >= 2 measurements per subject")
+
+    grand_mean = pivot.values.mean()
+    subject_means = pivot.mean(axis=1)
+
+    ss_between = n_measures * np.sum((subject_means - grand_mean) ** 2)
+    ss_within = np.sum((pivot.values - subject_means.values[:, np.newaxis]) ** 2)
+
+    ms_between = ss_between / (n_subjects - 1)
+    ms_within = ss_within / (n_subjects * (n_measures - 1))
+
+    icc = (ms_between - ms_within) / (ms_between + (n_measures - 1) * ms_within)
+    icc = np.clip(icc, 0, 1)
+
+    f_stat = ms_between / ms_within if ms_within > 0 else np.nan
+    p_value = 1 - sp_stats.f.cdf(f_stat, n_subjects - 1, n_subjects * (n_measures - 1))
+
+    return {
+        "icc": icc,
+        "f_stat": f_stat,
+        "p_value": p_value,
+        "n_subjects": n_subjects,
+        "n_measures": n_measures,
+        "interpretation": "Good" if icc > 0.6 else "Moderate" if icc > 0.4 else "Poor",
+    }
+
+
+def incremental_r_squared(
+    data: pd.DataFrame,
+    outcome: str,
+    base_predictors: list[str],
+    new_predictor: str,
+) -> dict:
+    """Test incremental R² of CNOI beyond readability."""
+    from scipy import stats as sp_stats
+
+    all_vars = [outcome] + base_predictors + [new_predictor]
+    df = data[all_vars].dropna()
+
+    y = df[outcome]
+    X_base = sm.add_constant(df[base_predictors])
+    X_full = sm.add_constant(df[base_predictors + [new_predictor]])
+
+    model_base = sm.OLS(y, X_base).fit()
+    model_full = sm.OLS(y, X_full).fit()
+
+    r2_incr = model_full.rsquared - model_base.rsquared
+    n, k = len(df), len(base_predictors) + 1
+
+    f_stat = (r2_incr / (1 - model_full.rsquared)) * (n - k - 1)
+    p_value = 1 - sp_stats.f.cdf(f_stat, 1, n - k - 1)
+
+    return {
+        "r2_base": model_base.rsquared,
+        "r2_full": model_full.rsquared,
+        "r2_incremental": r2_incr,
+        "f_stat": f_stat,
+        "p_value": p_value,
+        "significant": p_value < 0.05,
+        "n_obs": n,
+    }
