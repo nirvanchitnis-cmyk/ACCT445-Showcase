@@ -7,6 +7,7 @@ Includes:
 - Wild cluster bootstrap for few-cluster inference
 """
 
+from src.analysis.causal_inference.did_att_gt import aggregate_att, att_gt
 from src.analysis.causal_inference.did_bootstrap import (
     compute_effective_clusters,
     wild_cluster_bootstrap,
@@ -31,4 +32,6 @@ __all__ = [
     "placebo_test",
     "wild_cluster_bootstrap",
     "compute_effective_clusters",
+    "att_gt",
+    "aggregate_att",
 ]

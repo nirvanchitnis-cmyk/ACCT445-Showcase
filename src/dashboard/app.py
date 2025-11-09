@@ -198,6 +198,48 @@ def _display_event_study(data: dict[str, pd.DataFrame | None]) -> None:
         return
 
     st.dataframe(summary, use_container_width=True)
+
+    # KP Diagnostics (Kolari-Pynnönen cross-sectional correlation)
+    if "rho_bar" in summary.columns or "adj_factor" in summary.columns:
+        st.subheader("🔬 Kolari-Pynnönen Diagnostics")
+        st.caption(
+            "Cross-sectional correlation in event-date abnormal returns. "
+            "High ρ̄ → events cluster in calendar time (e.g., SVB crisis affecting all banks)."
+        )
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            rho_bar = summary["rho_bar"].mean() if "rho_bar" in summary.columns else np.nan
+            st.metric(
+                "Avg ρ̄ (Cross-Corr)",
+                f"{rho_bar:.3f}",
+                help="Average pairwise correlation of abnormal returns. >0.3 indicates clustering.",
+            )
+        with col2:
+            adj_factor = summary["adj_factor"].mean() if "adj_factor" in summary.columns else np.nan
+            st.metric(
+                "KP Adj Factor",
+                f"{adj_factor:.2f}",
+                help="sqrt(1 + (N-1)*ρ̄). >1.5 indicates material SE inflation.",
+            )
+        with col3:
+            if "t_standard" in summary.columns and "t_kp" in summary.columns:
+                t_std = summary["t_standard"].iloc[0]
+                t_kp = summary["t_kp"].iloc[0]
+                reduction = (1 - t_kp / t_std) * 100 if t_std != 0 else 0
+                st.metric(
+                    "t-stat Reduction",
+                    f"{reduction:.1f}%",
+                    help="% reduction in t-stat after KP adjustment. >20% suggests significant clustering.",
+                )
+
+        # Warning if high correlation detected
+        if rho_bar > 0.3:
+            st.warning(
+                f"⚠️ High cross-sectional correlation detected (ρ̄={rho_bar:.3f}). "
+                "Events cluster in calendar time. KP adjustment is MANDATORY for valid inference."
+            )
+
     if {"cnoi_quartile", "CAR_mean"}.issubset(summary.columns):
         st.subheader("Average CAR by Quartile")
         fig = px.bar(summary, x="cnoi_quartile", y="CAR_mean", color="cnoi_quartile")
