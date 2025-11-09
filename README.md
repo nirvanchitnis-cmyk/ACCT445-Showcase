@@ -3,8 +3,12 @@
 [![Test Suite](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/test.yml/badge.svg)](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/nirvanchitnis-cmyk/ACCT445-Showcase/branch/main/graph/badge.svg)](https://codecov.io/gh/nirvanchitnis-cmyk/ACCT445-Showcase)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![Production](https://img.shields.io/badge/status-production--ready-success.svg)](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/releases/tag/v1.0.0)
 
 **Research Question:** Does bank disclosure opacity (CNOI) predict stock returns and risk?
+
+**Status:** 🚀 Production-ready quantitative trading system with Docker deployment, automated backtests, and real-time monitoring dashboard.
 
 ## Overview
 
@@ -172,6 +176,78 @@ open docs/build/html/index.html
 GitHub Pages deployment (`.github/workflows/docs.yml`) publishes the same HTML whenever
 `main` is updated. Use the docs for API reference, operational runbooks, and system overviews.
 Need to skip in an emergency? Use `SKIP=pytest-check pre-commit run --all-files` for a single run or `git commit --no-verify` (not recommended).
+
+---
+
+## Production Deployment
+
+### 🐳 Docker Quick Start
+
+Deploy the complete system with Docker:
+
+```bash
+# Clone repository
+git clone https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase.git
+cd ACCT445-Showcase
+
+# Configure
+cp config/config.toml.example config/config.toml
+
+# Build and run
+docker-compose up -d
+
+# Access dashboard
+open http://localhost:8501
+
+# View logs
+docker logs acct445-showcase -f
+```
+
+**Services**:
+- **Dashboard** (port 8501): Real-time monitoring with 5 interactive pages
+- **Automated Runner**: Daily backtest updates at 6 PM ET
+- **Production Logging**: JSON logs with rotation
+
+See `DEPLOYMENT.md` for full deployment guide.
+
+### 📊 Monitoring Dashboard
+
+5-page Streamlit interface:
+
+1. **Overview**: Key metrics (Sharpe, returns, drawdown), cumulative returns chart
+2. **Decile Backtest**: Summary table, performance visualization
+3. **Event Study**: CAR analysis, significance tests
+4. **Risk Metrics**: VaR, CVaR, volatility, return distribution
+5. **Data Quality**: Ticker coverage monitoring, missing data alerts
+
+Access at `http://localhost:8501` after deployment.
+
+### 🤖 Automated Runner
+
+Daily backtest automation:
+- **Schedule**: 6 PM ET daily
+- **Actions**: Fetch CNOI data → Fetch market data → Run backtest → Update results
+- **Alerts**: Log warnings if signal weakens (t-stat < 1.0)
+- **Logs**: `logs/runner.log` (JSON format, rotated)
+
+Configure in `config/config.toml`:
+```toml
+[runner]
+schedule_time = "18:00"
+lookback_days = 365
+```
+
+### 📚 Documentation
+
+- **API Docs**: Sphinx documentation at `docs/build/html/index.html`
+  - Build: `make -C docs html`
+  - GitHub Pages: Auto-deployed on push to main
+- **Deployment Guide**: `DEPLOYMENT.md` (production setup)
+- **Incident Playbooks**: `docs/playbooks/` (4 operational guides)
+  - Data quality degradation
+  - Backtest failure
+  - Performance degradation
+  - Docker container crash
 
 ---
 
@@ -367,4 +443,4 @@ Data sources:
 
 ---
 
-**Last Updated:** November 1, 2025
+**Last Updated:** November 8, 2025 (v1.0.0 - Production Ready)
