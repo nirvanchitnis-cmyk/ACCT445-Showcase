@@ -1,0 +1,844 @@
+/**
+ * ACCT445 Academic Research Website
+ * McKinsey-Grade Professional Design
+ *
+ * Color Philosophy: NO PURPLE, NO GRADIENTS
+ * - Deep blue (#24477f) for authority and trust
+ * - Gold (#d4af37) for achievements and positive results
+ * - Clean white backgrounds for readability
+ * - Flat design for timeless professionalism
+ */
+
+/* ==========================================================================
+   CSS VARIABLES - McKinsey Corporate Blue Palette
+   ========================================================================== */
+
+:root {
+    /* Colors - McKinsey Blue Theme */
+    --primary-blue: #24477f;
+    --charcoal: #2c3e50;
+    --slate-gray: #64748b;
+    --light-gray: #f8f9fa;
+    --border-gray: #e2e8f0;
+    --gold: #d4af37;
+    --white: #ffffff;
+
+    /* Results Colors */
+    --positive-green: #15803d;
+    --negative-red: #dc2626;
+    --neutral-gray: #94a3b8;
+
+    /* Typography */
+    --font-serif: 'Crimson Text', Georgia, serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+    /* Spacing */
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 2rem;
+    --space-lg: 4rem;
+    --space-xl: 6rem;
+
+    /* Shadows (subtle, professional) */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   RESET & BASE STYLES
+   ========================================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--slate-gray);
+    background-color: var(--white);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--primary-blue);
+    margin-bottom: var(--space-sm);
+}
+
+h1 {
+    font-size: 3rem;
+    letter-spacing: -1px;
+}
+
+h2 {
+    font-size: 2.25rem;
+    letter-spacing: -0.5px;
+}
+
+h3 {
+    font-size: 1.75rem;
+}
+
+h4 {
+    font-size: 1.25rem;
+    color: var(--charcoal);
+}
+
+p {
+    margin-bottom: var(--space-sm);
+}
+
+a {
+    color: var(--primary-blue);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: var(--gold);
+}
+
+code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background-color: var(--light-gray);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    color: var(--charcoal);
+}
+
+strong {
+    font-weight: 600;
+    color: var(--charcoal);
+}
+
+/* ==========================================================================
+   LAYOUT
+   ========================================================================== */
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+section {
+    padding: var(--space-xl) 0;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: var(--space-md);
+    position: relative;
+}
+
+.section-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background-color: var(--gold);
+    margin: var(--space-sm) auto 0;
+}
+
+.section-intro {
+    text-align: center;
+    font-size: 1.125rem;
+    max-width: 800px;
+    margin: 0 auto var(--space-md);
+    color: var(--slate-gray);
+}
+
+/* ==========================================================================
+   HERO SECTION
+   ========================================================================== */
+
+.hero {
+    background-color: var(--primary-blue);
+    color: var(--white);
+    text-align: center;
+    padding: var(--space-xl) 0;
+    position: relative;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: var(--space-sm);
+    line-height: 1.1;
+}
+
+.hero-subtitle {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: var(--space-md);
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-meta {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: var(--space-md);
+    font-family: var(--font-mono);
+}
+
+.hero-actions {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: center;
+    margin-top: var(--space-md);
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.btn-primary {
+    background-color: var(--gold);
+    color: var(--charcoal);
+}
+
+.btn-primary:hover {
+    background-color: #e5a82f;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--white);
+    border-color: var(--white);
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   SUMMARY SECTION
+   ========================================================================== */
+
+.summary {
+    background-color: var(--light-gray);
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.summary-card {
+    background-color: var(--white);
+    padding: var(--space-md);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--primary-blue);
+}
+
+.summary-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-sm);
+}
+
+.summary-card h3 {
+    font-size: 1.5rem;
+    color: var(--charcoal);
+    margin-bottom: var(--space-xs);
+}
+
+.summary-stat {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: var(--space-sm);
+    font-family: var(--font-serif);
+}
+
+.summary-card p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   RESULTS SECTION (Visual Cards with Charts)
+   ========================================================================== */
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.result-card {
+    background-color: var(--white);
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.3s ease;
+}
+
+.result-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.result-card h3 {
+    font-size: 1.5rem;
+    color: var(--primary-blue);
+    margin-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--border-gray);
+    padding-bottom: var(--space-xs);
+}
+
+.chart-img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin-bottom: var(--space-sm);
+}
+
+figure {
+    margin: 0 0 var(--space-sm) 0;
+}
+
+figcaption {
+    font-size: 0.875rem;
+    color: var(--slate-gray);
+    font-style: italic;
+    text-align: center;
+    margin-top: var(--space-xs);
+}
+
+.result-stats {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.stat-box {
+    flex: 1;
+    text-align: center;
+    padding: var(--space-sm);
+    background-color: var(--light-gray);
+    border-radius: 4px;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--slate-gray);
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    font-family: var(--font-mono);
+}
+
+.stat-value.positive {
+    color: var(--positive-green);
+}
+
+.stat-value.negative {
+    color: var(--negative-red);
+}
+
+/* ==========================================================================
+   BY THE NUMBERS SECTION
+   ========================================================================== */
+
+.by-numbers {
+    background-color: var(--charcoal);
+    color: var(--white);
+}
+
+.by-numbers .section-title {
+    color: var(--white);
+}
+
+.by-numbers .section-title::after {
+    background-color: var(--gold);
+}
+
+.numbers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.number-box {
+    text-align: center;
+    padding: var(--space-md);
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.number {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--gold);
+    font-family: var(--font-serif);
+    line-height: 1;
+    margin-bottom: var(--space-xs);
+}
+
+.number-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   METHODOLOGY (Accordion)
+   ========================================================================== */
+
+.methodology {
+    background-color: var(--light-gray);
+}
+
+.accordion {
+    max-width: 900px;
+    margin: var(--space-md) auto 0;
+}
+
+.accordion-item {
+    background-color: var(--white);
+    border: 1px solid var(--border-gray);
+    border-radius: 8px;
+    margin-bottom: var(--space-sm);
+    overflow: hidden;
+}
+
+.accordion-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    user-select: none;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    background-color: var(--white);
+    transition: background-color 0.2s ease;
+    list-style: none;
+}
+
+.accordion-header::-webkit-details-marker {
+    display: none;
+}
+
+.accordion-header:hover {
+    background-color: var(--light-gray);
+}
+
+.accordion-header i {
+    width: 20px;
+    height: 20px;
+    stroke: var(--primary-blue);
+}
+
+.accordion-content {
+    padding: 0 var(--space-md) var(--space-md);
+    color: var(--slate-gray);
+}
+
+.accordion-content h4 {
+    margin-top: var(--space-sm);
+    margin-bottom: var(--space-xs);
+    font-size: 1.125rem;
+}
+
+.accordion-content ul {
+    margin-left: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.accordion-content li {
+    margin-bottom: var(--space-xs);
+}
+
+/* ==========================================================================
+   MATH FORMULAS (KaTeX)
+   ========================================================================== */
+
+.formula {
+    margin: var(--space-sm) 0;
+    padding: var(--space-sm);
+    background-color: var(--light-gray);
+    border-left: 4px solid var(--gold);
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.katex {
+    font-size: 1.1em;
+}
+
+/* ==========================================================================
+   CITATIONS
+   ========================================================================== */
+
+.citation-inline {
+    color: var(--primary-blue);
+    font-weight: 500;
+    border-bottom: 1px dotted var(--primary-blue);
+    cursor: help;
+}
+
+.citation-inline:hover {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+}
+
+/* ==========================================================================
+   REFERENCES SECTION
+   ========================================================================== */
+
+.references {
+    background-color: var(--white);
+}
+
+.ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.ref-category {
+    background-color: var(--light-gray);
+    padding: var(--space-md);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-blue);
+}
+
+.ref-category h3 {
+    font-size: 1.25rem;
+    color: var(--charcoal);
+    margin-bottom: var(--space-sm);
+}
+
+.ref-list {
+    list-style-position: inside;
+    margin-left: 0;
+}
+
+.ref-list li {
+    margin-bottom: var(--space-sm);
+    line-height: 1.6;
+    font-size: 0.9375rem;
+}
+
+.ref-list em {
+    color: var(--slate-gray);
+}
+
+.doi-link {
+    display: inline-block;
+    margin-left: var(--space-xs);
+    padding: 0.2em 0.6em;
+    background-color: var(--primary-blue);
+    color: var(--white);
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.doi-link:hover {
+    background-color: var(--gold);
+    color: var(--charcoal);
+}
+
+.ref-note {
+    margin-top: var(--space-md);
+    padding: var(--space-sm);
+    background-color: var(--light-gray);
+    border-left: 4px solid var(--gold);
+    border-radius: 4px;
+}
+
+/* ==========================================================================
+   REPRODUCIBILITY SECTION
+   ========================================================================== */
+
+.reproducibility {
+    background-color: var(--light-gray);
+}
+
+.repro-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.repro-card {
+    background-color: var(--white);
+    padding: var(--space-md);
+    border-radius: 8px;
+    box-shadow: var(--shadow-sm);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.repro-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.repro-icon {
+    width: 48px;
+    height: 48px;
+    stroke: var(--primary-blue);
+    margin-bottom: var(--space-sm);
+}
+
+.repro-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-xs);
+}
+
+.repro-card p {
+    font-size: 0.9375rem;
+    color: var(--slate-gray);
+    margin-bottom: var(--space-sm);
+}
+
+.repro-link {
+    color: var(--primary-blue);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-bottom-color 0.2s ease;
+}
+
+.repro-link:hover {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+}
+
+.tech-stack {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background-color: var(--white);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.tech-stack h3 {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-sm);
+}
+
+.tech-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    justify-content: center;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.4em 1em;
+    background-color: var(--primary-blue);
+    color: var(--white);
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: var(--font-mono);
+}
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+
+.footer {
+    background-color: var(--charcoal);
+    color: var(--white);
+    padding: var(--space-lg) 0 var(--space-md);
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.footer h3 {
+    color: var(--white);
+    font-size: 1.5rem;
+    margin-bottom: var(--space-xs);
+}
+
+.footer p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: var(--space-xs);
+}
+
+.footer-meta {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+}
+
+.footer-links {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: flex-end;
+}
+
+.footer-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+    color: var(--gold);
+}
+
+.footer-link i {
+    width: 20px;
+    height: 20px;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: var(--space-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (Mobile)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1.25rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .summary-grid,
+    .results-grid,
+    .repro-grid,
+    .ref-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .numbers-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .footer-links {
+        justify-content: center;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .numbers-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .result-stats {
+        flex-direction: column;
+    }
+}
+
+/* ==========================================================================
+   ACCESSIBILITY
+   ========================================================================== */
+
+:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    :root {
+        --primary-blue: #1a2f5f;
+        --slate-gray: #4a5568;
+    }
+}

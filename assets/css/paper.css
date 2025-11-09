@@ -1,0 +1,150 @@
+/**
+ * Full Paper Stylesheet (METHODOLOGY.md rendered)
+ * Professional academic typography for verbose reading
+ */
+
+:root {
+    --primary-blue: #24477f;
+    --charcoal: #2c3e50;
+    --slate-gray: #64748b;
+    --light-gray: #f8f9fa;
+    --gold: #d4af37;
+    --white: #ffffff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--slate-gray);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Crimson Text', Georgia, serif;
+    color: var(--primary-blue);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+h1 { font-size: 2.5rem; border-bottom: 3px solid var(--gold); padding-bottom: 0.5rem; }
+h2 { font-size: 2rem; margin-top: 3rem; border-bottom: 2px solid var(--light-gray); padding-bottom: 0.3rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; color: var(--charcoal); }
+
+p { margin-bottom: 1rem; }
+
+/* Table of Contents */
+#TOC {
+    background: var(--light-gray);
+    padding: 30px;
+    border-left: 4px solid var(--gold);
+    margin: 30px 0;
+    border-radius: 4px;
+}
+
+#TOC > ul { list-style: none; padding-left: 0; }
+#TOC li { margin: 0.5rem 0; }
+#TOC a { color: var(--primary-blue); text-decoration: none; font-weight: 500; }
+#TOC a:hover { color: var(--gold); }
+
+/* Code blocks */
+code {
+    background: var(--light-gray);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.9em;
+    color: var(--charcoal);
+}
+
+pre {
+    background: var(--light-gray);
+    padding: 1.5rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border-left: 4px solid var(--primary-blue);
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* Lists */
+ul, ol {
+    margin: 1rem 0 1rem 2rem;
+}
+
+li { margin: 0.5rem 0; }
+
+/* Links */
+a {
+    color: var(--primary-blue);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color 0.2s;
+}
+
+a:hover {
+    color: var(--gold);
+    text-decoration-color: var(--gold);
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+}
+
+th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--light-gray);
+}
+
+th {
+    background: var(--light-gray);
+    font-weight: 600;
+    color: var(--charcoal);
+}
+
+/* Blockquotes */
+blockquote {
+    border-left: 4px solid var(--gold);
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    background: var(--light-gray);
+    font-style: italic;
+}
+
+/* Math (MathJax) */
+.MathJax {
+    font-size: 1.1em !important;
+}
+
+/* Footnotes */
+.footnotes {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid var(--light-gray);
+    font-size: 0.875rem;
+}
+
+/* Print styles */
+@media print {
+    body { max-width: 100%; margin: 0; padding: 20px; }
+    #TOC { break-inside: avoid; }
+    h1, h2, h3 { break-after: avoid; }
+}
