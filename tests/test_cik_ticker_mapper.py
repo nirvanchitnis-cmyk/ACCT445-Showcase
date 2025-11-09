@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
-import requests
 
 from src.data.cik_ticker_mapper import (
     enrich_cnoi_with_tickers,
     fetch_sec_ticker_mapping,
     get_ticker_batch,
+    load_override_mapping,
     map_cik_to_ticker,
 )
 from src.utils.exceptions import DataValidationError, ExternalAPIError
@@ -20,36 +20,34 @@ from src.utils.exceptions import DataValidationError, ExternalAPIError
 class TestFetchSecTickerMapping:
     """Unit tests for SEC mapping downloads."""
 
-    @patch("src.data.cik_ticker_mapper.requests.get")
-    def test_fetch_success(self, mock_get, mock_sec_ticker_json):
+    @patch("src.data.cik_ticker_mapper.sec_api_client.fetch_sec_ticker_mapping")
+    def test_fetch_success(self, mock_fetch, mock_sec_ticker_json):
         """Successful fetch returns DataFrame with expected columns."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = mock_sec_ticker_json
-        mock_get.return_value = mock_response
+        mapping = {
+            cik.zfill(10): {"ticker": payload["ticker"], "title": payload["title"]}
+            for cik, payload in ((v["cik_str"], v) for v in mock_sec_ticker_json.values())
+        }
+        mock_fetch.return_value = mapping
 
-        df = fetch_sec_ticker_mapping()
+        df = fetch_sec_ticker_mapping(use_cache=False)
 
         assert isinstance(df, pd.DataFrame)
         assert {"cik", "ticker", "title"}.issubset(df.columns)
         assert len(df) == len(mock_sec_ticker_json)
-        mock_get.assert_called_once()
+        mock_fetch.assert_called_once_with(use_cache=False)
 
-    @patch("src.data.cik_ticker_mapper.requests.get")
-    def test_fetch_network_error(self, mock_get):
+    @patch("src.data.cik_ticker_mapper.sec_api_client.fetch_sec_ticker_mapping")
+    def test_fetch_network_error(self, mock_fetch):
         """Network failures are surfaced as ExternalAPIError."""
-        mock_get.side_effect = requests.RequestException("boom")
+        mock_fetch.side_effect = ExternalAPIError("boom")
 
         with pytest.raises(ExternalAPIError):
             fetch_sec_ticker_mapping()
 
-    @patch("src.data.cik_ticker_mapper.requests.get")
-    def test_fetch_invalid_json(self, mock_get):
-        """Invalid JSON response raises ExternalAPIError."""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.side_effect = ValueError("bad json")
-        mock_get.return_value = mock_response
+    @patch("src.data.cik_ticker_mapper.sec_api_client.fetch_sec_ticker_mapping")
+    def test_fetch_unexpected_error_wrapped(self, mock_fetch):
+        """Unexpected errors are wrapped as ExternalAPIError."""
+        mock_fetch.side_effect = ValueError("oops")
 
         with pytest.raises(ExternalAPIError):
             fetch_sec_ticker_mapping()
@@ -106,6 +104,24 @@ class TestEnrichCnoiWithTickers:
         enriched = enrich_cnoi_with_tickers(sample, mapping_df=mock_sec_ticker_df)
         assert enriched["ticker"].isna().all()
 
+    @patch("src.data.cik_ticker_mapper.load_override_mapping")
+    def test_enrich_uses_overrides(self, mock_override_loader, mock_sec_ticker_df):
+        sample = pd.DataFrame(
+            {
+                "cik": [99999],
+                "filing_date": pd.to_datetime(["2023-01-01"]),
+                "CNOI": [12.0],
+            }
+        )
+        mock_override_loader.return_value = pd.DataFrame(
+            {"cik": [99999], "ticker": ["OVRD"], "company_name": ["Override Co"]}
+        )
+
+        enriched = enrich_cnoi_with_tickers(sample, mapping_df=mock_sec_ticker_df)
+
+        assert enriched["ticker"].iloc[0] == "OVRD"
+        assert enriched["company_name"].iloc[0] == "Override Co"
+
 
 class TestGetTickerBatch:
     """Tests for batch lookup wrapper."""
@@ -130,3 +146,23 @@ class TestGetTickerBatch:
         result = get_ticker_batch([999999])
 
         assert result == {}
+
+    @patch("src.data.cik_ticker_mapper.load_override_mapping")
+    @patch("src.data.cik_ticker_mapper.fetch_sec_ticker_mapping")
+    @patch("src.data.cik_ticker_mapper.time.sleep")
+    def test_batch_uses_overrides(
+        self,
+        mock_sleep,
+        mock_fetch,
+        mock_override_loader,
+        mock_sec_ticker_df,
+    ):
+        mock_sleep.return_value = None
+        mock_fetch.return_value = mock_sec_ticker_df
+        mock_override_loader.return_value = pd.DataFrame(
+            {"cik": [55555], "ticker": ["OVRD"], "company_name": ["Override Co"]}
+        )
+
+        result = get_ticker_batch([55555])
+
+        assert result == {55555: "OVRD"}

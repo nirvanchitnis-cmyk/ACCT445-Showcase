@@ -1,0 +1,5 @@
+cik,ticker,company_name,notes
+947559,FBMS,"First Bancshares Inc (MS)","Missing from SEC company_tickers; mapped manually"
+1035976,FNCB,"FNCB Bancorp, Inc.","Missing from SEC company_tickers; mapped manually"
+740663,FLIC,"First of Long Island Corp.","Missing from SEC company_tickers; mapped manually"
+83246,HSBC,"HSBC USA Inc.","Maps to HSBC Holdings ADR for liquidity"
