@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/
+.coverage
+.dvc/tmp/
+*.log
+.vscode/
+.idea/
+.dvc/cache/
+.cache/
+results/checkpoints/
+notebooks/.ipynb_checkpoints/
