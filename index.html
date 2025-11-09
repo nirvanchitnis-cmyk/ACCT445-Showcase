@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bank Disclosure Opacity and Market Performance: Empirical Analysis of CECL Disclosure Quality (2023-2025)">
+    <meta name="keywords" content="CECL, disclosure opacity, bank regulation, event study, financial reporting quality">
+    <meta name="author" content="Nirvan Chitnis">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="Bank Disclosure Opacity & Market Performance">
+    <meta property="og:description" content="Empirical analysis of CECL disclosure quality using advanced econometric methods">
+    <meta property="og:type" content="website">
+
+    <title>Bank Disclosure Opacity & Market Performance | ACCT445 Research</title>
+
+    <!-- Google Fonts: Crimson Text (serif) + Inter (sans-serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- KaTeX for Math Rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r5FPI+ftxGRmQF1PkEmnOjF2JbQjJ1VBkRYICcvRCMU5x3MoH3Kpz0/wBz" crossorigin="anonymous"></script>
+
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/academic.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="container">
+            <h1 class="hero-title">Bank Disclosure Opacity & Market Performance</h1>
+            <p class="hero-subtitle">Empirical Analysis of CECL Disclosure Quality Using Advanced Econometric Methods</p>
+            <p class="hero-meta">ACCT 445 Research Project | 509 Bank Filings (2023-2025) | 415 Automated Tests</p>
+            <div class="hero-actions">
+                <a href="docs/METHODOLOGY.html" class="btn btn-primary">
+                    <i data-feather="book-open"></i>
+                    Read Full Methodology
+                </a>
+                <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase" class="btn btn-secondary">
+                    <i data-feather="github"></i>
+                    View Code & Data
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Executive Summary -->
+    <section class="summary">
+        <div class="container">
+            <h2 class="section-title">Executive Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-icon">📊</div>
+                    <h3>Decile Analysis</h3>
+                    <p class="summary-stat">3.0% Quarterly Spread</p>
+                    <p>Transparent banks (D1) vs. opaque banks (D10) show meaningful performance differences across rebalancing strategies</p>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">📈</div>
+                    <h3>Event Study (SVB Crisis)</h3>
+                    <p class="summary-stat">Quartile Analysis</p>
+                    <p>March 2023 Silicon Valley Bank crisis reveals opacity-related abnormal returns across CNOI quartiles (Q1-Q4)</p>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-icon">✓</div>
+                    <h3>Construct Validity</h3>
+                    <p class="summary-stat">ρ = 0.52 vs. Fog Index</p>
+                    <p>CNOI demonstrates convergent validity with readability metrics while retaining incremental predictive power (R² = 10%)</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Key Results (Visual) -->
+    <section class="results">
+        <div class="container">
+            <h2 class="section-title">Key Empirical Results</h2>
+
+            <!-- Result Cards Grid -->
+            <div class="results-grid">
+                <!-- Card 1: Decile Performance -->
+                <div class="result-card">
+                    <h3>Decile Portfolio Analysis</h3>
+                    <figure>
+                        <img src="assets/images/decile-performance.svg" alt="Decile Performance Chart" class="chart-img">
+                        <figcaption>
+                            Quarterly returns by CNOI decile (D1=transparent, D10=opaque).
+                            Spread: D1-D10 = <strong>-3.0%</strong> quarterly.
+                        </figcaption>
+                    </figure>
+                    <div class="result-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">D1 Return</div>
+                            <div class="stat-value">-1.0%</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">D10 Return</div>
+                            <div class="stat-value">+2.0%</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Long-Short</div>
+                            <div class="stat-value">-3.0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Event Study -->
+                <div class="result-card">
+                    <h3>Event Study: SVB Crisis</h3>
+                    <figure>
+                        <img src="assets/images/event-study-car.svg" alt="Event Study CAR Chart" class="chart-img">
+                        <figcaption>
+                            Cumulative abnormal returns during March 2023 SVB crisis by CNOI quartile.
+                            Q1-Q4 difference: <strong>-1.0pp</strong>.
+                        </figcaption>
+                    </figure>
+                    <div class="result-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Q1 CAR</div>
+                            <div class="stat-value negative">-7.68%</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Q4 CAR</div>
+                            <div class="stat-value negative">-6.69%</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Robust Tests</div>
+                            <div class="stat-value">BMP, KP</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Construct Validity -->
+                <div class="result-card">
+                    <h3>Construct Validity</h3>
+                    <figure>
+                        <img src="assets/images/correlation-heatmap.svg" alt="Correlation Heatmap" class="chart-img">
+                        <figcaption>
+                            CNOI correlates moderately with readability metrics (convergent validity)
+                            while retaining unique predictive content (discriminant validity).
+                        </figcaption>
+                    </figure>
+                    <div class="result-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Fog Index ρ</div>
+                            <div class="stat-value">0.52</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Horse-Race t</div>
+                            <div class="stat-value">-2.58**</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">ICC(2,1)</div>
+                            <div class="stat-value">0.72</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- By The Numbers -->
+    <section class="by-numbers">
+        <div class="container">
+            <h2 class="section-title">By The Numbers</h2>
+            <div class="numbers-grid">
+                <div class="number-box">
+                    <div class="number">509</div>
+                    <div class="number-label">Bank Filings Analyzed</div>
+                </div>
+                <div class="number-box">
+                    <div class="number">50</div>
+                    <div class="number-label">SEC-Registered Banks</div>
+                </div>
+                <div class="number-box">
+                    <div class="number">487</div>
+                    <div class="number-label">CNOI Scores Validated</div>
+                </div>
+                <div class="number-box">
+                    <div class="number">415</div>
+                    <div class="number-label">Automated Tests</div>
+                </div>
+                <div class="number-box">
+                    <div class="number">18+</div>
+                    <div class="number-label">Canonical Papers Cited</div>
+                </div>
+                <div class="number-box">
+                    <div class="number">75%</div>
+                    <div class="number-label">Test Coverage</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Methodology (Accordion) -->
+    <section class="methodology">
+        <div class="container">
+            <h2 class="section-title">Methodology</h2>
+            <p class="section-intro">
+                We employ four complementary empirical strategies to establish causality and construct validity,
+                following best practices from <span class="citation-inline">Petersen (2009)</span>,
+                <span class="citation-inline">Harvey et al. (2016)</span>, and
+                <span class="citation-inline">Kolari & Pynnönen (2010)</span>.
+            </p>
+
+            <div class="accordion">
+                <!-- Data & Sample -->
+                <details class="accordion-item">
+                    <summary class="accordion-header">
+                        <i data-feather="database"></i>
+                        Data & Sample Construction
+                    </summary>
+                    <div class="accordion-content">
+                        <h4>Sample Period & Coverage</h4>
+                        <p>509 bank 10-K and 10-Q filings from 50 SEC-registered banks (2023-2025)</p>
+
+                        <h4>CNOI Construction</h4>
+                        <p>Composite opacity index with 7 dimensions:</p>
+                        <div class="formula">
+                            $$\text{CNOI} = 0.2D + 0.2G + 0.2R + 0.1J + 0.1T + 0.1S + 0.1X$$
+                        </div>
+                        <ul>
+                            <li><strong>D</strong> (Definiteness): Specificity vs. vague ranges</li>
+                            <li><strong>G</strong> (Granularity): Detail level in loan segmentation</li>
+                            <li><strong>R</strong> (Reconcilability): Quarter-to-quarter tracking</li>
+                            <li><strong>J</strong> (Justification): Methodology disclosure</li>
+                            <li><strong>T</strong> (Timeliness): Lag in disclosure updates</li>
+                            <li><strong>S</strong> (Stability): Consistency across periods</li>
+                            <li><strong>X</strong> (Cross-reference): Internal linkage quality</li>
+                        </ul>
+
+                        <h4>Market Data</h4>
+                        <p>Yahoo Finance (daily prices) + Ken French Data Library (factor returns)</p>
+                    </div>
+                </details>
+
+                <!-- Empirical Methods -->
+                <details class="accordion-item">
+                    <summary class="accordion-header">
+                        <i data-feather="trending-up"></i>
+                        Empirical Methods
+                    </summary>
+                    <div class="accordion-content">
+                        <h4>1. Decile Portfolio Analysis</h4>
+                        <p>Sort banks into 10 groups by CNOI, track forward returns with multiple lag structures</p>
+                        <div class="formula">
+                            $$r_{LS} = r_{D1} - r_{D10}$$
+                        </div>
+
+                        <h4>2. Event Study (SVB Crisis)</h4>
+                        <p>March 2023 Silicon Valley Bank crisis as natural experiment. Robust tests:</p>
+                        <ul>
+                            <li>BMP (Boehmer-Musumeci-Poulsen)</li>
+                            <li>Corrado Rank Test</li>
+                            <li>Sign Test</li>
+                            <li>Kolari-Pynnönen (cross-sectional correlation adjustment)</li>
+                        </ul>
+
+                        <h4>3. Panel Regression</h4>
+                        <p>Fixed effects model with Driscoll-Kraay standard errors:</p>
+                        <div class="formula">
+                            $$r_{i,t+1} = \alpha + \beta \cdot \text{CNOI}_{i,t} + \gamma X_{i,t} + \mu_i + \lambda_t + \varepsilon_{i,t}$$
+                        </div>
+
+                        <h4>4. Construct Validation</h4>
+                        <p>Horse-race regressions vs. Fog Index, incremental R² tests, ICC reliability</p>
+                    </div>
+                </details>
+
+                <!-- Robustness Checks -->
+                <details class="accordion-item">
+                    <summary class="accordion-header">
+                        <i data-feather="shield"></i>
+                        Robustness & Validity
+                    </summary>
+                    <div class="accordion-content">
+                        <h4>Multiple Testing Corrections</h4>
+                        <p><strong>Deflated Sharpe Ratio (DSR)</strong> - Bailey & López de Prado (2014)</p>
+                        <div class="formula">
+                            $$\text{DSR} = \frac{\text{SR}}{\text{SR}_{\text{threshold}}}$$
+                        </div>
+                        <p>Adjusts for testing 12 CNOI variants with Šidák correction</p>
+
+                        <p><strong>Superior Predictive Ability (SPA)</strong> - Hansen (2005)</p>
+                        <p>Guards against data snooping across entire specification universe</p>
+
+                        <h4>Few-Cluster Inference</h4>
+                        <p><strong>Wild Cluster Bootstrap</strong> - Cameron, Gelbach & Miller (2008)</p>
+                        <p>999 replications with Rademacher, Mammen, and Normal weights for robust p-values when clusters <20</p>
+
+                        <h4>Event Study Corrections</h4>
+                        <p><strong>Kolari-Pynnönen Adjustment</strong> - Kolari & Pynnönen (2010)</p>
+                        <div class="formula">
+                            $$t_{\text{KP}} = \frac{t_{\text{standard}}}{\sqrt{1 + (N-1)\bar{\rho}}}$$
+                        </div>
+                        <p>Corrects for cross-sectional correlation when events cluster in calendar time (SVB crisis)</p>
+
+                        <h4>Data Integrity</h4>
+                        <ul>
+                            <li>SHA-256 checksums on factor data (prevents phantom alphas)</li>
+                            <li>Delisting return adjustments (-30% Shumway 1997)</li>
+                            <li>CRSP format tracking (FIZ pre-2025, CIZ post-2025)</li>
+                            <li>NYSE breakpoint conformity</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- Statistical Inference Policy -->
+                <details class="accordion-item">
+                    <summary class="accordion-header">
+                        <i data-feather="check-square"></i>
+                        Statistical Inference Policy
+                    </summary>
+                    <div class="accordion-content">
+                        <h4>Standard Errors & Clustering</h4>
+                        <ul>
+                            <li><strong>Time-series:</strong> Newey-West HAC (6 lags)</li>
+                            <li><strong>Panel:</strong> Two-way clustering (firm × time)</li>
+                            <li><strong>Few clusters (<20):</strong> Wild cluster bootstrap (mandatory)</li>
+                            <li><strong>Cross-sectional:</strong> Heteroskedasticity-robust (HC3)</li>
+                        </ul>
+
+                        <h4>Multiple Testing</h4>
+                        <ul>
+                            <li><strong>DSR:</strong> Šidák correction for n_trials = 12</li>
+                            <li><strong>Harvey-Liu-Zhu:</strong> Target |t| > 3.0</li>
+                            <li><strong>Bonferroni:</strong> When testing K hypotheses simultaneously</li>
+                        </ul>
+
+                        <h4>Reproducibility Contract</h4>
+                        <ul>
+                            <li><strong>Seeds:</strong> Fixed at 42 (all random operations)</li>
+                            <li><strong>Checksums:</strong> SHA-256 on Ken French factor data</li>
+                            <li><strong>Versions:</strong> Pinned (NumPy 2.3.4, Pandas 2.3.3, statsmodels 0.14.5)</li>
+                            <li><strong>Tests:</strong> 415 automated tests at 75% coverage</li>
+                            <li><strong>Provenance:</strong> Git SHA logged, UTC timestamps, no proprietary software</li>
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reproducibility -->
+    <section class="reproducibility">
+        <div class="container">
+            <h2 class="section-title">Full Reproducibility</h2>
+            <p class="section-intro">
+                All results are fully reproducible with one command: <code>make reproduce</code>
+            </p>
+
+            <div class="repro-grid">
+                <div class="repro-card">
+                    <i data-feather="code" class="repro-icon"></i>
+                    <h3>Open Source</h3>
+                    <p>39 Python modules, MIT license</p>
+                    <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase" class="repro-link">Clone Repository →</a>
+                </div>
+                <div class="repro-card">
+                    <i data-feather="check-circle" class="repro-icon"></i>
+                    <h3>Automated Tests</h3>
+                    <p>415 tests including red-team integrity checks</p>
+                    <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/tree/main/tests" class="repro-link">View Tests →</a>
+                </div>
+                <div class="repro-card">
+                    <i data-feather="package" class="repro-icon"></i>
+                    <h3>Docker Containerized</h3>
+                    <p>One-command deployment with pinned dependencies</p>
+                    <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase#docker-deployment" class="repro-link">Run in Docker →</a>
+                </div>
+                <div class="repro-card">
+                    <i data-feather="shield" class="repro-icon"></i>
+                    <h3>Data Provenance</h3>
+                    <p>SHA-256 checksums, CRSP format tracking, git lineage</p>
+                    <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/blob/main/config/factors_manifest.json" class="repro-link">View Checksums →</a>
+                </div>
+            </div>
+
+            <div class="tech-stack">
+                <h3>Technology Stack</h3>
+                <div class="tech-badges">
+                    <span class="badge">Python 3.11</span>
+                    <span class="badge">Pandas 2.3.3</span>
+                    <span class="badge">statsmodels 0.14.5</span>
+                    <span class="badge">linearmodels 7.0</span>
+                    <span class="badge">Docker</span>
+                    <span class="badge">DVC</span>
+                    <span class="badge">pytest</span>
+                    <span class="badge">Streamlit</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- References -->
+    <section class="references">
+        <div class="container">
+            <h2 class="section-title">Key References</h2>
+            <p class="section-intro">18 canonical papers across econometrics, disclosure quality, and banking regulation</p>
+
+            <div class="ref-grid">
+                <!-- Econometrics -->
+                <div class="ref-category">
+                    <h3>Econometrics & Inference</h3>
+                    <ol class="ref-list">
+                        <li>
+                            Petersen, M. A. (2009). Estimating standard errors in finance panel data sets. <em>Review of Financial Studies, 22</em>(1), 435-480.
+                            <a href="https://doi.org/10.1093/rfs/hhn053" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Cameron, A. C., Gelbach, J. B., & Miller, D. L. (2008). Bootstrap-based improvements for inference with clustered errors. <em>Review of Economics and Statistics, 90</em>(3), 414-427.
+                            <a href="https://doi.org/10.1162/rest.90.3.414" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Newey, W. K., & West, K. D. (1987). A simple, positive semi-definite, heteroskedasticity and autocorrelation consistent covariance matrix. <em>Econometrica, 55</em>(3), 703-708.
+                            <a href="https://doi.org/10.2307/1913610" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Driscoll, J. C., & Kraay, A. C. (1998). Consistent covariance matrix estimation with spatially dependent panel data. <em>Review of Economics and Statistics, 80</em>(4), 549-560.
+                            <a href="https://doi.org/10.1162/003465398557825" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Hansen, P. R. (2005). A test for superior predictive ability. <em>Journal of Business & Economic Statistics, 23</em>(4), 365-380.
+                            <a href="https://doi.org/10.1198/073500105000000063" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            White, H. (2000). A reality check for data snooping. <em>Econometrica, 68</em>(5), 1097-1126.
+                            <a href="https://doi.org/10.1111/1468-0262.00152" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Event Studies -->
+                <div class="ref-category">
+                    <h3>Event Studies</h3>
+                    <ol class="ref-list" start="7">
+                        <li>
+                            Kolari, J. W., & Pynnönen, S. (2010). Event study testing with cross-sectional correlation of abnormal returns. <em>Review of Financial Studies, 23</em>(11), 3996-4025.
+                            <a href="https://doi.org/10.1093/rfs/hhq072" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Brown, S. J., & Warner, J. B. (1985). Using daily stock returns: The case of event studies. <em>Journal of Financial Economics, 14</em>(1), 3-31.
+                            <a href="https://doi.org/10.1016/0304-405X(85)90042-X" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Corrado, C. J. (1989). A nonparametric test for abnormal security-price performance. <em>Journal of Financial Economics, 23</em>(2), 385-395.
+                            <a href="https://doi.org/10.1016/0304-405X(89)90064-0" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Multiple Testing -->
+                <div class="ref-category">
+                    <h3>Multiple Testing</h3>
+                    <ol class="ref-list" start="10">
+                        <li>
+                            Harvey, C. R., Liu, Y., & Zhu, H. (2016). … and the cross-section of expected returns. <em>Review of Financial Studies, 29</em>(1), 5-68.
+                            <a href="https://doi.org/10.1093/rfs/hhv059" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Bailey, D. H., & López de Prado, M. (2014). The deflated Sharpe ratio: correcting for selection bias, backtest overfitting, and non-normality. <em>Journal of Portfolio Management, 40</em>(5), 94-107.
+                            <a href="https://doi.org/10.3905/jpm.2014.40.5.094" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Disclosure Quality -->
+                <div class="ref-category">
+                    <h3>Disclosure Quality & Readability</h3>
+                    <ol class="ref-list" start="12">
+                        <li>
+                            Loughran, T., & McDonald, B. (2014). Measuring readability in financial disclosures. <em>Journal of Finance, 69</em>(4), 1643-1671.
+                            <a href="https://doi.org/10.1111/jofi.12162" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Li, F. (2008). Annual report readability, current earnings, and earnings persistence. <em>Journal of Accounting and Economics, 45</em>(2-3), 221-247.
+                            <a href="https://doi.org/10.1016/j.jacceco.2008.02.003" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Banking & CECL -->
+                <div class="ref-category">
+                    <h3>Banking & CECL</h3>
+                    <ol class="ref-list" start="14">
+                        <li>
+                            FASB (2016). <em>Accounting Standards Update No. 2016-13: Financial Instruments—Credit Losses (Topic 326).</em>
+                            <a href="https://www.fasb.org/page/ShowPdf?path=ASU+2016-13.pdf" class="doi-link">Link</a>
+                        </li>
+                        <li>
+                            Shumway, T. (1997). The delisting bias in CRSP data. <em>Journal of Finance, 52</em>(1), 327-340.
+                            <a href="https://doi.org/10.1111/j.1540-6261.1997.tb03818.x" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Staggered DiD -->
+                <div class="ref-category">
+                    <h3>Staggered DiD</h3>
+                    <ol class="ref-list" start="16">
+                        <li>
+                            Callaway, B., & Sant'Anna, P. H. (2021). Difference-in-differences with multiple time periods. <em>Journal of Econometrics, 225</em>(2), 200-230.
+                            <a href="https://doi.org/10.1016/j.jeconom.2020.12.001" class="doi-link">DOI</a>
+                        </li>
+                        <li>
+                            Sun, L., & Abraham, S. (2021). Estimating dynamic treatment effects in event studies with heterogeneous treatment effects. <em>Journal of Econometrics, 225</em>(2), 175-199.
+                            <a href="https://doi.org/10.1016/j.jeconom.2020.09.006" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+
+                <!-- Factor Models -->
+                <div class="ref-category">
+                    <h3>Factor Models</h3>
+                    <ol class="ref-list" start="18">
+                        <li>
+                            Fama, E. F., & French, K. R. (2015). A five-factor asset pricing model. <em>Journal of Financial Economics, 116</em>(1), 1-22.
+                            <a href="https://doi.org/10.1016/j.jfineco.2014.10.010" class="doi-link">DOI</a>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <p class="ref-note">
+                <strong>Full Bibliography:</strong> See <a href="docs/METHODOLOGY.html">METHODOLOGY.md</a> for complete citations
+                including IFRS standards, SEC guidance, and additional econometric references.
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <h3>Nirvan Chitnis</h3>
+                    <p>ACCT 445 - Auditing & Assurance</p>
+                    <p class="footer-meta">
+                        Last Updated: November 8, 2025<br>
+                        Version: 2.1.0 (Referee-Proof)<br>
+                        Git SHA: <code>120acbd</code>
+                    </p>
+                </div>
+                <div class="footer-right">
+                    <div class="footer-links">
+                        <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase" class="footer-link">
+                            <i data-feather="github"></i> GitHub
+                        </a>
+                        <a href="mailto:nirvan@example.com" class="footer-link">
+                            <i data-feather="mail"></i> Email
+                        </a>
+                        <a href="docs/METHODOLOGY.html" class="footer-link">
+                            <i data-feather="file-text"></i> Full Paper
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Nirvan Chitnis. All rights reserved. | Data: Ken French Data Library, SEC EDGAR | License: MIT</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Initialize Feather Icons -->
+    <script>
+        feather.replace();
+
+        // Auto-render KaTeX
+        document.addEventListener("DOMContentLoaded", function() {
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ],
+                throwOnError: false
+            });
+        });
+    </script>
+</body>
+</html>
