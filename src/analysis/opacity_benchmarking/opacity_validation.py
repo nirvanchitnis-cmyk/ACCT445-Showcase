@@ -662,3 +662,102 @@ def incremental_r_squared(
         "significant": p_value < 0.05,
         "n_obs": n,
     }
+
+
+def readability_convergent_discriminant(
+    data: pd.DataFrame,
+    outcome: str,
+    cnoi_col: str = "CNOI",
+    readability_col: str = "fog_index",
+    controls: list[str] | None = None,
+) -> dict:
+    """
+    Test convergent and discriminant validity of CNOI vs. readability metrics.
+
+    Convergent validity: CNOI should correlate moderately with readability (ρ ≈ 0.4-0.6)
+    Discriminant validity: CNOI should retain significance controlling for readability
+
+    Addresses: "Is CNOI just a fancy readability index?" criticism
+    (Loughran & McDonald 2014; Bushee, Gow & Taylor 2018)
+
+    Args:
+        data: DataFrame with outcome, CNOI, readability, and controls
+        outcome: Dependent variable (e.g., 'ret_fwd')
+        cnoi_col: CNOI column name (default 'CNOI')
+        readability_col: Readability metric (e.g., 'fog_index', 'flesch_ease')
+        controls: List of control variables (size, btm, momentum, etc.)
+
+    Returns:
+        {
+            'convergent_rho': float,      # Correlation (CNOI, readability)
+            'convergent_p': float,        # P-value for correlation
+            'model1_coef': float,         # Y ~ readability
+            'model1_t': float,
+            'model2_coef_cnoi': float,    # Y ~ CNOI + readability
+            'model2_t_cnoi': float,
+            'model2_coef_read': float,
+            'model2_t_read': float,
+            'discriminant_valid': bool,   # True if CNOI sig in model 2
+            'interpretation': str,
+        }
+
+    Example:
+        >>> result = readability_convergent_discriminant(
+        ...     df, outcome='ret_fwd', controls=['log_mcap', 'book_to_market']
+        ... )
+        >>> print(f"Convergent: ρ={result['convergent_rho']:.3f}")
+        >>> print(f"Discriminant: CNOI t={result['model2_t_cnoi']:.2f} (with Fog)")
+    """
+    from scipy.stats import pearsonr
+
+    controls = controls or []
+    all_vars = [outcome, cnoi_col, readability_col] + controls
+    df = data[all_vars].dropna()
+
+    if len(df) < 10:
+        raise ValueError("Need at least 10 observations for validity testing")
+
+    # Step 1: Convergent validity (correlation)
+    rho, p_rho = pearsonr(df[cnoi_col], df[readability_col])
+
+    # Step 2: Model 1 - Outcome ~ Readability + Controls
+    y = df[outcome]
+    X1 = sm.add_constant(df[[readability_col] + controls])
+    model1 = sm.OLS(y, X1).fit(cov_type="HC3")  # Robust SEs
+
+    # Step 3: Model 2 - Outcome ~ CNOI + Readability + Controls (horse race)
+    X2 = sm.add_constant(df[[cnoi_col, readability_col] + controls])
+    model2 = sm.OLS(y, X2).fit(cov_type="HC3")
+
+    # Discriminant validity: CNOI should be significant even with readability
+    discriminant_valid = model2.pvalues[cnoi_col] < 0.05
+
+    # Interpretation
+    if abs(rho) < 0.3:
+        interp = "Weak convergent validity (ρ too low - may not measure readability)"
+    elif abs(rho) > 0.8:
+        interp = "Poor discriminant validity (ρ too high - redundant with readability)"
+    elif discriminant_valid:
+        interp = (
+            f"Good construct validity: ρ={rho:.2f} (moderate convergence), "
+            f"CNOI sig in horse race (t={model2.tvalues[cnoi_col]:.2f})"
+        )
+    else:
+        interp = "Weak discriminant validity (CNOI not sig controlling for readability)"
+
+    return {
+        "convergent_rho": float(rho),
+        "convergent_p": float(p_rho),
+        "model1_coef": float(model1.params[readability_col]),
+        "model1_t": float(model1.tvalues[readability_col]),
+        "model1_p": float(model1.pvalues[readability_col]),
+        "model2_coef_cnoi": float(model2.params[cnoi_col]),
+        "model2_t_cnoi": float(model2.tvalues[cnoi_col]),
+        "model2_p_cnoi": float(model2.pvalues[cnoi_col]),
+        "model2_coef_read": float(model2.params[readability_col]),
+        "model2_t_read": float(model2.tvalues[readability_col]),
+        "model2_p_read": float(model2.pvalues[readability_col]),
+        "discriminant_valid": bool(discriminant_valid),
+        "interpretation": interp,
+        "n_obs": int(len(df)),
+    }
