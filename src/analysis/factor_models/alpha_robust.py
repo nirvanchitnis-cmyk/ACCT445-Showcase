@@ -80,7 +80,7 @@ def deflated_sharpe_ratio(
 
     if var_sr <= 0:
         logger.warning(
-            "Negative variance estimate (SR=%.2f, skew=%.2f, kurt=%.2f). Using std(SR)=1/sqrt(N-1).",
+            "Negative variance estimate (SR=%.2f, skew=%.2f, kurt=%.2f). Using std(SR)=1/sqrt(N-1)",
             sharpe_ratio,
             skewness,
             kurtosis,
@@ -256,6 +256,100 @@ def rolling_alpha(
     )
 
     return rolling_df
+
+
+def plot_rolling_dsr(
+    rolling_alpha_df: pd.DataFrame,
+    n_trials: int = 1,
+    figsize: tuple = (12, 6),
+    save_path: str | None = None,
+) -> object:
+    """
+    Plot rolling Deflated Sharpe Ratio over time.
+
+    Visualizes DSR stability across rolling windows to demonstrate that
+    alpha is not a one-period fluke (Bailey & López de Prado 2014).
+
+    Args:
+        rolling_alpha_df: Output from rolling_alpha() with columns [alpha, t_alpha, r_squared]
+        n_trials: Number of trials for DSR calculation (default 1)
+        figsize: Figure dimensions (default 12x6)
+        save_path: Optional path to save figure (PNG/SVG)
+
+    Returns:
+        matplotlib.figure.Figure
+
+    Example:
+        >>> rolling_alphas = rolling_alpha(returns, factors, window=52)
+        >>> fig = plot_rolling_dsr(rolling_alphas, n_trials=12)
+        >>> fig.savefig('rolling_dsr.png', dpi=300, bbox_inches='tight')
+    """
+    import matplotlib.pyplot as plt
+
+    # Compute DSR for each rolling window
+    dsr_values = []
+    for _idx, row in rolling_alpha_df.iterrows():
+        # Use t-stat to infer Sharpe ratio (approximate)
+        # SR ≈ t / sqrt(n-1) for simple case
+        n_obs = row.get("n_obs", 52)  # Default to 1 year
+        sharpe_est = row["t_alpha"] / np.sqrt(n_obs - 1)
+
+        # Compute DSR (simplified: assume normality for rolling windows)
+        dsr_result = deflated_sharpe_ratio(
+            sharpe_ratio=sharpe_est,
+            n_observations=int(n_obs),
+            n_trials=n_trials,
+            skewness=0,
+            kurtosis=3,
+        )
+        dsr_values.append(dsr_result["dsr"])
+
+    # Create plot
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.plot(rolling_alpha_df.index, dsr_values, linewidth=2, label="Rolling DSR", color="steelblue")
+    ax.axhline(
+        y=1.0, color="red", linestyle="--", linewidth=1.5, label="Significance Threshold (DSR=1)"
+    )
+    ax.axhline(y=0, color="gray", linestyle="-", linewidth=0.5, alpha=0.5)
+
+    ax.fill_between(
+        rolling_alpha_df.index,
+        0,
+        dsr_values,
+        where=[d > 1.0 for d in dsr_values],
+        alpha=0.2,
+        color="green",
+        label="Significant",
+    )
+
+    ax.set_xlabel("Date", fontsize=12)
+    ax.set_ylabel("Deflated Sharpe Ratio", fontsize=12)
+    ax.set_title(f"Rolling DSR (n_trials={n_trials})", fontsize=14, fontweight="bold")
+    ax.legend(loc="best", frameon=True)
+    ax.grid(True, alpha=0.3)
+
+    # Annotate statistics
+    median_dsr = np.median(dsr_values)
+    pct_significant = sum(d > 1.0 for d in dsr_values) / len(dsr_values) * 100
+    textstr = f"Median DSR: {median_dsr:.2f}\n{pct_significant:.1f}% windows significant"
+    ax.text(
+        0.02,
+        0.98,
+        textstr,
+        transform=ax.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+    )
+
+    plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+        logger.info("Saved rolling DSR plot to %s", save_path)
+
+    return fig
 
 
 def compute_alpha_with_dsr(

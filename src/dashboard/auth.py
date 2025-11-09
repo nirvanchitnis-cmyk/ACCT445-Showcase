@@ -65,7 +65,7 @@ def authenticate() -> tuple[str, bool, str]:
 
     name, authentication_status, username = authenticator.login("Login", "main")
 
-    if not authentication_status:
+    if authentication_status is False:
         st.error("Username/password is incorrect")
     elif authentication_status is None:
         st.warning("Please enter your username and password")

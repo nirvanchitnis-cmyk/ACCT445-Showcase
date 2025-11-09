@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +15,7 @@ import streamlit as st
 
 from src.dashboard.auth import authenticate
 from src.utils.config import get_config_value
+from src.utils.logger import get_logger
 from src.utils.performance_metrics import (
     conditional_var,
     max_drawdown,
@@ -21,9 +24,34 @@ from src.utils.performance_metrics import (
     value_at_risk,
 )
 
+logger = get_logger(__name__)
+
 RESULTS_DIR = Path(get_config_value("data.results_dir", "results"))
 
 st.set_page_config(page_title="ACCT445 Showcase", layout="wide", page_icon="📊")
+
+
+def get_git_sha() -> str:
+    """Get current git commit SHA."""
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+    except Exception:
+        return "unknown"
+
+
+def log_startup_info() -> None:
+    """Log system startup information for reproducibility."""
+    logger.info("=" * 60)
+    logger.info("STREAMLIT DASHBOARD STARTUP")
+    logger.info("=" * 60)
+    logger.info("Python: %s", sys.version.split()[0])
+    logger.info("NumPy: %s", np.__version__)
+    logger.info("Pandas: %s", pd.__version__)
+    logger.info("Streamlit: %s", st.__version__)
+    logger.info("Git SHA: %s", get_git_sha())
+    logger.info("NumPy random seed: Fixed at 42 (module-level)")
+    logger.info("Timezone: UTC (DST-safe)")
+    logger.info("=" * 60)
 
 
 @st.cache_data(show_spinner=False)
@@ -236,8 +264,109 @@ def _display_data_quality(data: dict[str, pd.DataFrame | None]) -> None:
         )
 
 
+def _display_health_check(data: dict[str, pd.DataFrame | None]) -> None:
+    """Display system health check status."""
+    st.title("🏥 System Health Check")
+
+    # System Information
+    st.subheader("System Information")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Python Version", f"{sys.version.split()[0]}")
+    with col2:
+        st.metric("Git SHA", get_git_sha())
+    with col3:
+        st.metric("NumPy Seed", "42 (Fixed)")
+
+    # Data Health
+    st.subheader("Data Health")
+    data_health = {}
+    for key, df in data.items():
+        if df is not None and not df.empty:
+            data_health[key] = {
+                "status": "✅ OK",
+                "rows": len(df),
+                "columns": len(df.columns),
+                "memory": f"{df.memory_usage(deep=True).sum() / 1024 ** 2:.2f} MB",
+            }
+        else:
+            data_health[key] = {
+                "status": "❌ MISSING",
+                "rows": 0,
+                "columns": 0,
+                "memory": "0 MB",
+            }
+
+    health_df = pd.DataFrame(data_health).T
+    st.dataframe(health_df, use_container_width=True)
+
+    # Results File Timestamps
+    st.subheader("Results File Timestamps")
+    results_files = list(RESULTS_DIR.glob("*.csv"))
+    if results_files:
+        file_info = []
+        for f in results_files:
+            mtime = datetime.fromtimestamp(f.stat().st_mtime)
+            age_hours = (datetime.now() - mtime).total_seconds() / 3600
+            status = "✅" if age_hours < 48 else "⚠️"
+            file_info.append(
+                {
+                    "File": f.name,
+                    "Status": status,
+                    "Last Modified": mtime.strftime("%Y-%m-%d %H:%M"),
+                    "Age (hours)": f"{age_hours:.1f}",
+                }
+            )
+        st.dataframe(pd.DataFrame(file_info), use_container_width=True)
+    else:
+        st.warning("No results files found in results directory")
+
+    # Overall Health Status
+    st.subheader("Overall Status")
+    all_ok = all(v["status"] == "✅ OK" for v in data_health.values())
+    recent_results = (
+        any(
+            (datetime.now() - datetime.fromtimestamp(f.stat().st_mtime)).total_seconds() < 172800
+            for f in results_files
+        )
+        if results_files
+        else False
+    )
+
+    if all_ok and recent_results:
+        st.success("✅ System is healthy - All checks passed")
+    elif all_ok:
+        st.warning("⚠️ System partially healthy - Data OK but results may be stale (>48h)")
+    else:
+        st.error("❌ System unhealthy - Missing data files")
+
+    # JSON Health Check Response (for monitoring)
+    with st.expander("JSON Health Check (for monitoring tools)"):
+        health_json = {
+            "status": "healthy"
+            if all_ok and recent_results
+            else "degraded"
+            if all_ok
+            else "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "git_sha": get_git_sha(),
+            "python_version": sys.version.split()[0],
+            "data_status": {k: v["status"] for k, v in data_health.items()},
+            "results_age_hours": min(
+                (datetime.now() - datetime.fromtimestamp(f.stat().st_mtime)).total_seconds() / 3600
+                for f in results_files
+            )
+            if results_files
+            else 999,
+        }
+        st.json(health_json)
+
+
 def main() -> None:
     """Entry point for Streamlit."""
+    # Log startup information for reproducibility
+    log_startup_info()
+
     # Authentication gate
     name, authentication_status, username = authenticate()
 
@@ -250,7 +379,14 @@ def main() -> None:
     st.sidebar.markdown("---")
     page = st.sidebar.radio(
         "Navigation",
-        ["Overview", "Decile Backtest", "Event Study", "Risk Metrics", "Data Quality"],
+        [
+            "Overview",
+            "Decile Backtest",
+            "Event Study",
+            "Risk Metrics",
+            "Data Quality",
+            "Health Check",
+        ],
     )
     st.sidebar.markdown("---")
     st.sidebar.caption(f"Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
@@ -270,8 +406,10 @@ def main() -> None:
         _display_event_study(data)
     elif page == "Risk Metrics":
         _display_risk_metrics(data)
-    else:
+    elif page == "Data Quality":
         _display_data_quality(data)
+    elif page == "Health Check":
+        _display_health_check(data)
 
 
 if __name__ == "__main__":

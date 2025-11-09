@@ -8,6 +8,7 @@ from src.analysis.factor_models.alpha_decomposition import (
 from src.analysis.factor_models.alpha_robust import (
     compute_alpha_with_dsr,
     deflated_sharpe_ratio,
+    plot_rolling_dsr,
     rolling_alpha,
 )
 from src.analysis.factor_models.fama_french import (
@@ -25,5 +26,6 @@ __all__ = [
     "alpha_attribution",
     "deflated_sharpe_ratio",
     "rolling_alpha",
+    "plot_rolling_dsr",
     "compute_alpha_with_dsr",
 ]

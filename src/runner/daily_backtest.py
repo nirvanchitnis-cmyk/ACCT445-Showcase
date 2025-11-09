@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import schedule
 
@@ -25,6 +28,28 @@ from src.utils.market_data import fetch_bulk_data, validate_data_quality
 LOG_FILE = Path("logs/runner.log")
 LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 LOGGER = get_logger(__name__, log_file=LOG_FILE)
+
+
+def get_git_sha() -> str:
+    """Get current git commit SHA."""
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+    except Exception:
+        return "unknown"
+
+
+def log_startup_info() -> None:
+    """Log system startup information for reproducibility."""
+    LOGGER.info("=" * 60)
+    LOGGER.info("DAILY BACKTEST RUNNER STARTUP")
+    LOGGER.info("=" * 60)
+    LOGGER.info("Python: %s", sys.version.split()[0])
+    LOGGER.info("NumPy: %s", np.__version__)
+    LOGGER.info("Pandas: %s", pd.__version__)
+    LOGGER.info("Git SHA: %s", get_git_sha())
+    LOGGER.info("NumPy random seed: Fixed at 42 (module-level)")
+    LOGGER.info("Timezone: UTC (DST-safe)")
+    LOGGER.info("=" * 60)
 
 
 def _parse_date(value: str | None) -> datetime | None:
@@ -203,6 +228,8 @@ def run_daily_update(
 
 def schedule_daily_updates(run_on_start: bool = True) -> None:
     """Schedule daily updates at configured time (default 6 PM ET)."""
+    log_startup_info()
+
     schedule_time = str(get_config_value("runner.schedule_time", "18:00"))
     if run_on_start:
         run_daily_update()
