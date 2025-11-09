@@ -84,9 +84,8 @@ def load_override_mapping(path: str | Path | None = None) -> pd.DataFrame:
     overrides = pd.read_csv(target)
     required_cols = {"cik", "ticker"}
     if not required_cols.issubset(overrides.columns):
-        raise DataValidationError(
-            f"Override mapping at {target} missing columns: {sorted(required_cols - set(overrides.columns))}"
-        )
+        missing_cols = sorted(required_cols - set(overrides.columns))
+        raise DataValidationError(f"Override mapping at {target} missing columns: {missing_cols}")
 
     overrides = overrides.copy()
     overrides["cik"] = overrides["cik"].astype(int)
@@ -208,7 +207,7 @@ def get_ticker_batch(ciks: list, rate_limit_delay: float = 0.1) -> dict[int, str
     mapping_df = fetch_sec_ticker_mapping()
     overrides = load_override_mapping()
     override_lookup = (
-        dict(zip(overrides["cik"], overrides["ticker"])) if not overrides.empty else {}
+        dict(zip(overrides["cik"], overrides["ticker"], strict=True)) if not overrides.empty else {}
     )
 
     result = {}
