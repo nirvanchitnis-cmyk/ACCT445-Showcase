@@ -36,6 +36,17 @@ n_bootstrap = 1000
 n_permutations = 1000
 bootstrap_confidence = 0.95
 
+[runner]
+schedule_time = "18:00"
+lookback_days = 365
+anomaly_tstat_threshold = 1.0
+
+[alerts]
+enable_email = false
+smtp_server = "smtp.gmail.com"
+from_email = "alerts@example.com"
+to_email = "admin@example.com"
+
 [panel_regression]
 entity_effects = true
 time_effects = true
