@@ -1,0 +1,5 @@
+outs:
+- md5: f0fddf291132450192d36d6aa00ea76a
+  size: 1622
+  hash: md5
+  path: event_study_daily_cum_ar.csv

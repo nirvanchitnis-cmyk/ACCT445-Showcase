@@ -122,6 +122,31 @@ poetry install
 
 **No large files required!** Sample CNOI data (top/bottom 20 banks) included in `config/`.
 
+### Data Versioning (DVC)
+
+This project versions datasets with [DVC](https://dvc.org/):
+
+- `config/sample_cnoi.csv` (sample CNOI universe)
+- `data/cache/` (SEC/yfinance cache artifacts)
+- `results/*.csv` (notebook outputs)
+
+After cloning:
+
+```bash
+pip install -r requirements.txt   # installs dvc>=3
+dvc pull                          # fetches tracked datasets
+```
+
+When regenerating data locally:
+
+```bash
+# Re-run notebooks or scripts that update CSVs/cache
+dvc add config/sample_cnoi.csv data/cache results/*.csv
+dvc push  # upload to the configured remote
+```
+
+Checkpoint reports in `results/checkpoints/` stay in git for easy diffing; only heavy CSVs/caches rely on DVC.
+
 ---
 
 ## Usage

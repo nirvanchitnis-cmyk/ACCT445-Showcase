@@ -1,0 +1,5 @@
+outs:
+- md5: 3860f14e491876cb1ea73543419f64bf
+  size: 1310495
+  hash: md5
+  path: market_returns.csv

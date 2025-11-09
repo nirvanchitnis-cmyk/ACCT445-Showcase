@@ -1,0 +1,5 @@
+outs:
+- md5: 854b150d379e2ba7537ecc95098bc040
+  size: 204
+  hash: md5
+  path: decile_long_short_lag2_equal.csv

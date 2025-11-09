@@ -1,0 +1,5 @@
+outs:
+- md5: 4caf1a33f81dad19a13a238e3c7787ef
+  size: 1917
+  hash: md5
+  path: panel_regression_results.csv

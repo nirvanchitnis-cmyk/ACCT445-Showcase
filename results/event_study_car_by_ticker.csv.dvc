@@ -1,0 +1,5 @@
+outs:
+- md5: 9fdf4d219326ab432c48af077ede4af7
+  size: 1765
+  hash: md5
+  path: event_study_car_by_ticker.csv

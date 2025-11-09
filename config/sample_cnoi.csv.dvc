@@ -1,0 +1,5 @@
+outs:
+- md5: 104f9fba396da187c12f75a7bf0009d4
+  size: 344267
+  hash: md5
+  path: sample_cnoi.csv
