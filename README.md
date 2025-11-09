@@ -158,6 +158,19 @@ pre-commit run --all-files       # optional: run everything once
 ```
 
 Hooks enforce Black + Ruff style, whitespace hygiene, YAML validation, file-size guards, `pytest --cov=src --cov-fail-under=80`, and `dvc status`.
+
+### Documentation
+
+Sphinx docs live under `docs/` (built with the Read the Docs theme). To build locally:
+
+```bash
+pip install -r requirements.txt  # ensures sphinx + theme exist
+make -C docs html
+open docs/build/html/index.html
+```
+
+GitHub Pages deployment (`.github/workflows/docs.yml`) publishes the same HTML whenever
+`main` is updated. Use the docs for API reference, operational runbooks, and system overviews.
 Need to skip in an emergency? Use `SKIP=pytest-check pre-commit run --all-files` for a single run or `git commit --no-verify` (not recommended).
 
 ---
