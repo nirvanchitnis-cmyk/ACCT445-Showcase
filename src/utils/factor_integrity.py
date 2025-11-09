@@ -4,19 +4,49 @@ Factor data integrity checking using SHA-256 checksums.
 Ensures factor data hasn't been corrupted or tampered with, preventing
 silent factor mis-alignment that can create phantom alphas.
 
+Critical: Jan 2025 CRSP format switch from FIZ to CIZ affects factor construction.
+Track provenance (source, format, fetch date) to ensure replicability.
+
 References:
 - Ken French Data Library: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
+- CRSP FIZ→CIZ change: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass
+class FactorProvenance:
+    """
+    Metadata for factor data provenance tracking.
+
+    Critical for replicability after Jan 2025 CRSP FIZ→CIZ format switch.
+
+    Attributes:
+        source_url: URL where factor data was downloaded
+        frequency: Data frequency ('daily', 'weekly', 'monthly')
+        crsp_format: CRSP data format ('FIZ' pre-2025, 'CIZ' post-2025)
+        fetched_at: ISO8601 timestamp of download
+        nyse_breakpoints: True if sorts use NYSE breakpoints (recommended)
+        description: Human-readable description
+    """
+
+    source_url: str
+    frequency: str
+    crsp_format: str  # "FIZ" or "CIZ"
+    fetched_at: str  # ISO8601
+    nyse_breakpoints: bool
+    description: str = ""
 
 
 def sha256_file(path: Path | str) -> str:
@@ -129,32 +159,103 @@ def verify_factors(manifest_path: Path | str = Path("config/factors_manifest.jso
     return {"all_valid": True, "results": results}
 
 
+def record_provenance(
+    factor_file: Path | str,
+    source_url: str,
+    frequency: str,
+    crsp_format: str,
+    nyse_breakpoints: bool = True,
+    description: str = "",
+) -> dict:
+    """
+    Record provenance metadata for a factor file.
+
+    Args:
+        factor_file: Path to factor CSV file
+        source_url: Ken French Data Library URL
+        frequency: 'daily', 'weekly', or 'monthly'
+        crsp_format: 'FIZ' (pre-2025) or 'CIZ' (post-2025)
+        nyse_breakpoints: True if sorts use NYSE breakpoints
+        description: Human-readable description
+
+    Returns:
+        Dict with sha256 and provenance metadata
+
+    Example:
+        >>> prov = record_provenance(
+        ...     "data/factors/ff5_daily.csv",
+        ...     source_url="https://mba.tuck.dartmouth.edu/...",
+        ...     frequency="daily",
+        ...     crsp_format="CIZ",  # Post-2025 format
+        ...     nyse_breakpoints=True
+        ... )
+    """
+    factor_file = Path(factor_file)
+    sha = sha256_file(factor_file)
+
+    provenance = FactorProvenance(
+        source_url=source_url,
+        frequency=frequency,
+        crsp_format=crsp_format,
+        fetched_at=dt.datetime.utcnow().isoformat(),
+        nyse_breakpoints=nyse_breakpoints,
+        description=description,
+    )
+
+    return {"path": str(factor_file), "sha256": sha, "provenance": asdict(provenance)}
+
+
 def generate_manifest(
-    factor_files: dict[str, Path | str],
+    factor_files: dict[str, Path | str | dict],
     output_path: Path | str = Path("config/factors_manifest.json"),
 ) -> None:
     """
-    Generate a factor manifest JSON with SHA-256 checksums.
+    Generate a factor manifest JSON with SHA-256 checksums and provenance.
 
     Args:
-        factor_files: Dict of {factor_name: file_path}
+        factor_files: Dict of {factor_name: file_path} OR
+                      {factor_name: {path: ..., provenance: {...}}}
         output_path: Where to save manifest
 
     Example:
         >>> generate_manifest({
-        ...     "ff5_daily": "data/factors/F-F_Research_Data_5_Factors_2x3_daily.CSV",
-        ...     "mom_daily": "data/factors/F-F_Momentum_Factor_daily.CSV"
+        ...     "ff5_daily": {
+        ...         "path": "data/factors/ff5_daily.csv",
+        ...         "source_url": "https://...",
+        ...         "frequency": "daily",
+        ...         "crsp_format": "CIZ",
+        ...         "nyse_breakpoints": True
+        ...     }
         ... })
     """
     manifest = {}
-    for name, path in factor_files.items():
-        path = Path(path)
-        if not path.exists():
-            logger.warning("Skipping %s - file not found: %s", name, path)
-            continue
+    for name, spec in factor_files.items():
+        # Handle simple path or full spec dict
+        if isinstance(spec, (str, Path)):
+            path = Path(spec)
+            if not path.exists():
+                logger.warning("Skipping %s - file not found: %s", name, path)
+                continue
+            sha = sha256_file(path)
+            manifest[name] = {"path": str(path), "sha256": sha}
+        else:
+            # Full spec with provenance
+            path = Path(spec["path"])
+            if not path.exists():
+                logger.warning("Skipping %s - file not found: %s", name, path)
+                continue
 
-        sha = sha256_file(path)
-        manifest[name] = {"path": str(path), "sha256": sha}
+            # Record full provenance
+            entry = record_provenance(
+                path,
+                source_url=spec.get("source_url", "unknown"),
+                frequency=spec.get("frequency", "unknown"),
+                crsp_format=spec.get("crsp_format", "unknown"),
+                nyse_breakpoints=spec.get("nyse_breakpoints", True),
+                description=spec.get("description", ""),
+            )
+            manifest[name] = entry
+
         logger.info("Added %s: %s (SHA-256: %s)", name, path, sha[:16] + "...")
 
     output_path = Path(output_path)

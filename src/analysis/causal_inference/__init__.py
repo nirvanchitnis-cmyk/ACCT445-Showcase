@@ -9,6 +9,7 @@ Includes:
 
 from src.analysis.causal_inference.did_att_gt import aggregate_att, att_gt
 from src.analysis.causal_inference.did_bootstrap import (
+    compare_wild_bootstrap_weights,
     compute_effective_clusters,
     wild_cluster_bootstrap,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "plot_parallel_trends",
     "placebo_test",
     "wild_cluster_bootstrap",
+    "compare_wild_bootstrap_weights",
     "compute_effective_clusters",
     "att_gt",
     "aggregate_att",

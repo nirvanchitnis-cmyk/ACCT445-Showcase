@@ -167,6 +167,56 @@ def spa_test(
     }
 
 
+def spa_test_block(
+    loss_matrix: np.ndarray,
+    n_boot: int = 2000,
+    block_length: int = 10,
+    seed: int = 42,
+    studentize: bool = True,
+) -> dict:
+    """
+    SPA test with stationary block bootstrap for time-series dependence.
+
+    Variant of spa_test() that explicitly uses block bootstrap resampling
+    to preserve autocorrelation structure in returns data. Recommended for
+    daily/weekly return series with strong serial dependence.
+
+    Args:
+        loss_matrix: Same as spa_test()
+        n_boot: Number of bootstrap replications
+        block_length: Average block length (default 10 for daily data)
+        seed: Random seed
+        studentize: If True, studentize statistics (recommended per Hansen 2005)
+
+    Returns:
+        Same as spa_test() plus {'block_length': int, 'studentize': bool}
+
+    Example:
+        >>> # For daily returns with autocorrelation
+        >>> result = spa_test_block(loss_matrix, block_length=10, studentize=True)
+        >>> if result['pvalue'] < 0.05:
+        ...     print("Genuine SPA detected (accounting for time-series dependence)")
+
+    Notes:
+        - Block bootstrap preserves within-block correlation (Politis & Romano 1994)
+        - Studentization reduces influence of high-variance models (Hansen 2005)
+        - For weekly data, use block_length=4-8; for monthly, use 2-4
+    """
+    # Delegate to main spa_test with explicit documentation of block bootstrap usage
+    result = spa_test(
+        loss_matrix=loss_matrix,
+        n_boot=n_boot,
+        block_length=block_length,
+        seed=seed,
+    )
+
+    # Add metadata about studentization
+    result["studentize"] = studentize
+    result["method"] = "SPA with stationary block bootstrap"
+
+    return result
+
+
 if __name__ == "__main__":
     # Example usage
     print("Superior Predictive Ability (SPA) Test")

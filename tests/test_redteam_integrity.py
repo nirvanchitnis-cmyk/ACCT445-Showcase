@@ -173,7 +173,7 @@ class TestDelistingSensitivity:
         sharpes = []
 
         for penalty in penalties:
-            returns = apply_delisting_returns(prices, delist_dates, penalty=penalty)
+            returns, stats = apply_delisting_returns(prices, delist_dates, penalty=penalty)
             port_ret = returns.mean(axis=1).dropna()
             sharpe = port_ret.mean() / port_ret.std() if port_ret.std() > 0 else 0
             sharpes.append(sharpe)

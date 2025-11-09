@@ -466,6 +466,108 @@ def compute_alpha_with_dsr(
     }
 
 
+def alpha_sensitivity_panel(
+    portfolio_returns: pd.Series,
+    factors: pd.DataFrame,
+    models: list[str] | None = None,
+    n_trials: int = 1,
+    annualize: bool = True,
+    periods_per_year: int = 252,
+) -> pd.DataFrame:
+    """
+    Triangulate alpha across multiple factor models.
+
+    Demonstrates that opacity premium is not a style-tilt artifact by showing
+    consistency across FF3, FF5, and Carhart specifications. Reports min-t to
+    meet Harvey-Liu-Zhu (2016) conservative discovery threshold.
+
+    Args:
+        portfolio_returns: Portfolio return series
+        factors: Factor DataFrame (must include all required factors)
+        models: List of models to test (default ['FF3', 'FF5', 'Carhart'])
+        n_trials: Number of trials for DSR (default 1)
+        annualize: Annualize alpha (default True)
+        periods_per_year: Periods per year (252 for daily, 52 for weekly)
+
+    Returns:
+        DataFrame with columns [model, alpha_annual, t_alpha, p_alpha, r_squared, dsr, psr]
+
+    Example:
+        >>> sensitivity = alpha_sensitivity_panel(decile_returns, factors, n_trials=12)
+        >>> print(sensitivity[['model', 'alpha_annual', 't_alpha', 'dsr']])
+           model  alpha_annual  t_alpha    dsr
+        0    FF3        0.0220     3.45   0.68
+        1    FF5        0.0215     3.38   0.66
+        2  Carhart      0.0218     3.42   0.67
+        >>> min_t = sensitivity['t_alpha'].min()
+        >>> print(f"Min t-stat across models: {min_t:.2f} (HLZ threshold: 3.0)")
+
+    Interpretation:
+        - Consistent alpha and t>3.0 across models → robust to factor choice
+        - Wide variation → potential style-tilt artifact
+        - Report min-t as conservative estimate per HLZ (2016)
+    """
+    if models is None:
+        models = ["FF3", "FF5", "Carhart"]
+
+    results = []
+    for model in models:
+        logger.info("Computing alpha for model: %s", model)
+
+        alpha_result = compute_alpha_with_dsr(
+            portfolio_returns=portfolio_returns,
+            factors=factors,
+            model=model,
+            n_trials=n_trials,
+            annualize=annualize,
+            periods_per_year=periods_per_year,
+        )
+
+        results.append(
+            {
+                "model": model,
+                "alpha_annual": alpha_result["alpha_annual"],
+                "alpha_daily": alpha_result["alpha_daily"],
+                "t_alpha": alpha_result["t_alpha"],
+                "p_alpha": alpha_result["p_alpha"],
+                "r_squared": alpha_result["r_squared"],
+                "sharpe_annual": alpha_result["sharpe_annual"],
+                "dsr": alpha_result["dsr"],
+                "psr": alpha_result["psr"],
+                "dsr_significant": alpha_result["dsr_significant"],
+                "harvey_threshold": alpha_result["harvey_threshold"],
+                "n_obs": alpha_result["n_obs"],
+            }
+        )
+
+    sensitivity_df = pd.DataFrame(results)
+
+    # Report min-t (conservative per HLZ 2016)
+    min_t = sensitivity_df["t_alpha"].min()
+    max_t = sensitivity_df["t_alpha"].max()
+    t_range = max_t - min_t
+
+    logger.info(
+        "Alpha sensitivity: %d models, t-stat range [%.2f, %.2f], min-t=%.2f (HLZ threshold: 3.0)",
+        len(models),
+        min_t,
+        max_t,
+        min_t,
+    )
+
+    if t_range > 1.0:
+        logger.warning(
+            "Large t-stat variation (%.2f) across models. May indicate style-tilt sensitivity.",
+            t_range,
+        )
+    elif min_t > 3.0:
+        logger.info(
+            "All models meet HLZ t>3.0 threshold. Alpha robust to factor choice."
+        )
+
+    return sensitivity_df
+
+
 if __name__ == "__main__":
     # Example usage
     print("Alpha robustness module loaded successfully")

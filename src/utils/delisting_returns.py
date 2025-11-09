@@ -98,8 +98,25 @@ def apply_delisting_returns(
             penalty * 100,
         )
 
-    logger.info("Delisting adjustments applied: %d tickers", n_adjustments)
-    return returns
+    # Count total observations replaced
+    n_obs_replaced = sum(
+        (returns.index > pd.to_datetime(delist_dates.get(col, "2099-12-31"))).sum()
+        + (returns.index == pd.to_datetime(delist_dates.get(col, "2099-12-31"))).sum()
+        for col in returns.columns
+        if col in delist_dates
+    )
+
+    total_obs = returns.notna().sum().sum()
+    pct_replaced = (n_obs_replaced / total_obs * 100) if total_obs > 0 else 0
+
+    logger.info(
+        "Delisting adjustments: %d tickers, %d obs replaced (%.2f%% of total)",
+        n_adjustments,
+        n_obs_replaced,
+        pct_replaced,
+    )
+
+    return returns, {"n_tickers": n_adjustments, "n_obs_replaced": n_obs_replaced, "pct_replaced": pct_replaced}
 
 
 def estimate_delisting_sensitivity(
@@ -133,7 +150,7 @@ def estimate_delisting_sensitivity(
 
     results = []
     for pen in penalties:
-        returns = apply_delisting_returns(prices, delist_dates, penalty=pen)
+        returns, stats = apply_delisting_returns(prices, delist_dates, penalty=pen)
         port_ret = returns.mean(axis=1)  # Equal-weighted portfolio
 
         results.append(
@@ -142,6 +159,8 @@ def estimate_delisting_sensitivity(
                 "mean_return": float(port_ret.mean()),
                 "std_return": float(port_ret.std()),
                 "sharpe": float(port_ret.mean() / port_ret.std()) if port_ret.std() > 0 else np.nan,
+                "n_obs_replaced": stats["n_obs_replaced"],
+                "pct_replaced": stats["pct_replaced"],
             }
         )
 

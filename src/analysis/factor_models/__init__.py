@@ -6,6 +6,7 @@ from src.analysis.factor_models.alpha_decomposition import (
     jensen_alpha,
 )
 from src.analysis.factor_models.alpha_robust import (
+    alpha_sensitivity_panel,
     compute_alpha_with_dsr,
     deflated_sharpe_ratio,
     plot_rolling_dsr,
@@ -32,6 +33,7 @@ __all__ = [
     "rolling_alpha",
     "plot_rolling_dsr",
     "compute_alpha_with_dsr",
+    "alpha_sensitivity_panel",
     "fit_with_policy",
     "estimate_alpha_with_policy",
 ]

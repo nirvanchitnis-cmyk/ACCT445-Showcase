@@ -308,6 +308,93 @@ def compute_effective_clusters(
     return result
 
 
+def compare_wild_bootstrap_weights(
+    data: pd.DataFrame,
+    outcome: str,
+    treatment: str,
+    entity_id: str,
+    time_id: str | None = None,
+    controls: list[str] | None = None,
+    n_boot: int = 999,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """
+    Compare wild bootstrap p-values across weight distributions.
+
+    Reports Rademacher, Mammen, and Normal weights side-by-side to demonstrate
+    robustness of inference to weight choice (Cameron et al. 2008).
+
+    Args:
+        data, outcome, treatment, entity_id, time_id, controls: Same as wild_cluster_bootstrap()
+        n_boot: Number of bootstrap replications (default 999)
+        seed: Random seed for reproducibility
+
+    Returns:
+        DataFrame with columns [weight_type, p_bootstrap, p_bootstrap_sym, coef, se_bootstrap]
+
+    Example:
+        >>> comparison = compare_wild_bootstrap_weights(
+        ...     df, outcome='ret_fwd', treatment='treat_post',
+        ...     entity_id='cik', time_id='quarter'
+        ... )
+        >>> print(comparison)
+           weight_type  p_bootstrap  p_bootstrap_sym      coef  se_bootstrap
+        0  rademacher        0.012            0.015  -0.0082         0.0025
+        1      mammen        0.014            0.016  -0.0082         0.0026
+        2      normal        0.013            0.014  -0.0082         0.0024
+
+    Interpretation:
+        If p-values are similar across weight types, inference is robust.
+        Material differences suggest sensitivity to weight choice.
+    """
+    weight_types = ["rademacher", "mammen", "normal"]
+    results = []
+
+    for weight in weight_types:
+        logger.info("Running wild bootstrap with %s weights...", weight)
+
+        result = wild_cluster_bootstrap(
+            data=data,
+            outcome=outcome,
+            treatment=treatment,
+            entity_id=entity_id,
+            time_id=time_id,
+            controls=controls,
+            n_boot=n_boot,
+            seed=seed,
+            weight_type=weight,
+        )
+
+        results.append(
+            {
+                "weight_type": weight,
+                "p_bootstrap": result["p_bootstrap"],
+                "p_bootstrap_sym": result["p_bootstrap_sym"],
+                "coef": result["coef"],
+                "se_bootstrap": result["se_bootstrap"],
+                "se_conventional": result["se_conventional"],
+                "n_clusters": result["n_clusters"],
+            }
+        )
+
+    comparison_df = pd.DataFrame(results)
+
+    # Check robustness
+    p_range = comparison_df["p_bootstrap"].max() - comparison_df["p_bootstrap"].min()
+    if p_range > 0.05:
+        logger.warning(
+            "Wild bootstrap p-values vary by %.3f across weight types. Consider reporting all.",
+            p_range,
+        )
+    else:
+        logger.info(
+            "Wild bootstrap inference robust across weight types (p-value range: %.3f)",
+            p_range,
+        )
+
+    return comparison_df
+
+
 if __name__ == "__main__":
     print("Wild cluster bootstrap module loaded")
     print("Functions:")
