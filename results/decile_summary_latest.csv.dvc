@@ -1,0 +1,5 @@
+outs:
+- md5: 85abf665830d80d241f4972b843b224d
+  size: 618
+  hash: md5
+  path: decile_summary_latest.csv

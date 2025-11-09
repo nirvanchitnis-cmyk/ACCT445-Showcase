@@ -1,0 +1,5 @@
+outs:
+- md5: 0650ede533c7a7a3c71963f9a29411b0
+  size: 788
+  hash: md5
+  path: decile_long_short_latest.csv
