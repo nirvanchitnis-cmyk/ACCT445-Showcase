@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Iterable
 from functools import wraps
@@ -9,6 +10,7 @@ from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
+from joblib import Parallel, delayed
 
 from src.utils.exceptions import DataDownloadError
 from src.utils.logger import get_logger
@@ -32,11 +34,13 @@ def rate_limited(calls_per_second: float = 2.0):
 
     def decorator(func):
         last_called = [0.0]
+        lock = threading.Lock()
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            elapsed = time.time() - last_called[0]
-            wait_time = min_interval - elapsed
+            with lock:
+                elapsed = time.time() - last_called[0]
+                wait_time = min_interval - elapsed
             if wait_time > 0:
                 logger.debug(
                     "Rate limiting %s; sleeping %.3fs to respect API constraints.",
@@ -45,7 +49,8 @@ def rate_limited(calls_per_second: float = 2.0):
                 )
                 time.sleep(wait_time)
             result = func(*args, **kwargs)
-            last_called[0] = time.time()
+            with lock:
+                last_called[0] = time.time()
             return result
 
         return wrapper
@@ -76,9 +81,7 @@ def _load_cache(cache_file: Path) -> pd.DataFrame | None:
 def _standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     if isinstance(df.columns, pd.MultiIndex):
         df = df.copy()
-        df.columns = [
-            col[0] if isinstance(col, tuple) else col for col in df.columns.to_list()
-        ]
+        df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns.to_list()]
 
     normalized = df.copy()
     normalized.columns = [str(col).lower().replace(" ", "_") for col in normalized.columns]
@@ -121,6 +124,18 @@ def _prepare_price_frame(raw: pd.DataFrame, ticker: str) -> pd.DataFrame:
 
 
 @rate_limited(calls_per_second=2.0)
+def _download_from_yfinance(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """Centralized wrapper so rate limiting only applies to real downloads."""
+
+    return yf.download(
+        ticker,
+        start=start_date,
+        end=end_date,
+        auto_adjust=True,
+        progress=False,
+    )
+
+
 def fetch_ticker_data(
     ticker: str,
     start_date: str,
@@ -152,13 +167,7 @@ def fetch_ticker_data(
     for attempt in range(max_retries):
         try:
             logger.info("Fetching %s from yfinance (%s/%s).", ticker, attempt + 1, max_retries)
-            raw = yf.download(
-                ticker,
-                start=start_date,
-                end=end_date,
-                auto_adjust=True,
-                progress=False,
-            )
+            raw = _download_from_yfinance(ticker, start_date, end_date)
             df = _prepare_price_frame(raw, ticker)
             df.to_pickle(cache_file)
             logger.info("✓ %s: %s rows downloaded.", ticker, len(df))
@@ -181,18 +190,110 @@ def fetch_ticker_data(
     raise DataDownloadError(f"Failed to fetch {ticker} data.") from last_error
 
 
+def _assemble_market_frames(
+    frames: list[pd.DataFrame],
+    failures: dict[str, str],
+) -> pd.DataFrame:
+    """Combine successful ticker frames and log failures."""
+
+    if not frames:
+        logger.warning("No market data fetched for requested tickers.")
+        return pd.DataFrame(columns=["date", "ticker", "close", "ret"])
+
+    combined = pd.concat(frames, ignore_index=True).sort_values(["ticker", "date"])
+    combined.reset_index(drop=True, inplace=True)
+
+    if failures:
+        logger.warning("Tickers failed (%s): %s", len(failures), ", ".join(sorted(failures)))
+
+    return combined
+
+
+def parallel_ticker_fetch(
+    tickers: Iterable[str],
+    start_date: str,
+    end_date: str,
+    *,
+    use_cache: bool = True,
+    max_retries: int = 3,
+    n_jobs: int | None = None,
+) -> pd.DataFrame:
+    """Fetch ticker data concurrently using joblib threads."""
+
+    tickers = [ticker.upper() for ticker in tickers]
+    if not tickers:
+        raise ValueError("tickers list cannot be empty.")
+
+    jobs = n_jobs or -1
+    logger.info(
+        "Parallel fetch for %s tickers (%s workers).",
+        len(tickers),
+        jobs,
+    )
+
+    def _task(symbol: str) -> tuple[str, pd.DataFrame | None, str | None]:
+        try:
+            frame = fetch_ticker_data(
+                symbol,
+                start_date=start_date,
+                end_date=end_date,
+                use_cache=use_cache,
+                max_retries=max_retries,
+            )
+            return symbol, frame, None
+        except DataDownloadError as exc:
+            return symbol, None, str(exc)
+
+    results = Parallel(n_jobs=jobs, prefer="threads", batch_size=1)(
+        delayed(_task)(ticker) for ticker in tickers
+    )
+
+    frames: list[pd.DataFrame] = []
+    failures: dict[str, str] = {}
+    for ticker, frame, error in results:
+        if frame is not None and not frame.empty:
+            frames.append(frame)
+        if error:
+            failures[ticker] = error
+
+    logger.info(
+        "Parallel fetch complete (%s successes, %s failures).",
+        len(frames),
+        len(failures),
+    )
+    return _assemble_market_frames(frames, failures)
+
+
 def fetch_bulk_data(
     tickers: Iterable[str],
     start_date: str,
     end_date: str,
     use_cache: bool = True,
     max_retries: int = 3,
+    parallel: bool = False,
+    n_jobs: int | None = None,
 ) -> pd.DataFrame:
-    """Fetch data for multiple tickers with lightweight progress logging."""
+    """
+    Fetch data for multiple tickers with optional parallelization.
+
+    Args:
+        parallel: When True, use joblib to download tickers concurrently.
+        n_jobs: Number of worker threads for the parallel fetch (-1 uses all cores).
+    """
 
     tickers = [ticker.upper() for ticker in tickers]
     if not tickers:
         raise ValueError("tickers list cannot be empty.")
+
+    if parallel:
+        return parallel_ticker_fetch(
+            tickers,
+            start_date,
+            end_date,
+            use_cache=use_cache,
+            max_retries=max_retries,
+            n_jobs=n_jobs,
+        )
 
     frames: list[pd.DataFrame] = []
     failures: dict[str, str] = {}
@@ -217,17 +318,7 @@ def fetch_bulk_data(
         finally:
             logger.info("Progress: %s/%s tickers processed.", idx, total)
 
-    if not frames:
-        logger.warning("No market data fetched for requested tickers.")
-        return pd.DataFrame(columns=["date", "ticker", "close", "ret"])
-
-    combined = pd.concat(frames, ignore_index=True).sort_values(["ticker", "date"])
-    combined.reset_index(drop=True, inplace=True)
-
-    if failures:
-        logger.warning("Tickers failed (%s): %s", len(failures), ", ".join(sorted(failures)))
-
-    return combined
+    return _assemble_market_frames(frames, failures)
 
 
 def validate_data_quality(df: pd.DataFrame) -> dict[str, float]:

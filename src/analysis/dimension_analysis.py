@@ -14,6 +14,7 @@ from pandas.api.types import is_datetime64_any_dtype
 from scipy import stats
 
 from src.analysis.decile_backtest import run_decile_backtest
+from src.utils.config import get_config_value
 from src.utils.exceptions import DataValidationError
 from src.utils.logger import get_logger
 
@@ -88,8 +89,8 @@ def _compute_p_value(t_stat: float, n_obs: int | None) -> float:
 def analyze_single_dimension(
     df: pd.DataFrame,
     dimension: str,
-    n_deciles: int = 10,
-    weighting: str = "equal",
+    n_deciles: int | None = None,
+    weighting: str | None = None,
 ) -> dict[str, Any]:
     """
     Run a decile backtest for a single CNOI dimension.
@@ -107,6 +108,11 @@ def analyze_single_dimension(
         raise ValueError(
             "Unknown dimension: " f"{dimension}. Must be one of {list(DIMENSIONS.keys())}."
         )
+
+    n_deciles = n_deciles or int(get_config_value("backtest.n_deciles", 10))
+    weighting = (weighting or str(get_config_value("backtest.weighting", "equal"))).lower()
+    if weighting not in ("equal", "value"):
+        raise DataValidationError("weighting must be either 'equal' or 'value'.")
 
     logger.info("Analyzing dimension %s - %s", dimension, DIMENSIONS[dimension])
     working = _ensure_date_column(df)
@@ -163,8 +169,8 @@ def analyze_single_dimension(
 
 def analyze_all_dimensions(
     df: pd.DataFrame,
-    n_deciles: int = 10,
-    weighting: str = "equal",
+    n_deciles: int | None = None,
+    weighting: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Run the dimension analysis for every available dimension."""
     logger.info("Running dimension analysis across all %s dimensions", len(DIMENSIONS))

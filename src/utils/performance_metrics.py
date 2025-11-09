@@ -200,6 +200,22 @@ def omega_ratio(
     return gains / losses
 
 
+def rolling_volatility(
+    returns: pd.Series,
+    window: int = 21,
+    periods_per_year: int = 252,
+) -> pd.Series:
+    """Rolling annualized volatility series for volatility targeting."""
+
+    if window < 2:
+        raise ValueError("window must be at least 2.")
+
+    series = _validate_returns(returns, min_length=2)
+    min_periods = min(window, len(series))
+    rolling_std = series.rolling(window=window, min_periods=min_periods).std(ddof=1)
+    return rolling_std * math.sqrt(periods_per_year)
+
+
 def compute_all_metrics(
     returns: pd.Series,
     benchmark_returns: pd.Series | None = None,
@@ -221,6 +237,14 @@ def compute_all_metrics(
         "kurtosis": kurtosis(returns),
         "omega": omega_ratio(returns, threshold=risk_free_rate, periods_per_year=periods_per_year),
     }
+
+    rolling_window = max(2, min(21, len(_validate_returns(returns, min_length=2))))
+    rolling_vol_series = rolling_volatility(
+        returns,
+        window=rolling_window,
+        periods_per_year=periods_per_year,
+    )
+    metrics[f"rolling_vol_{rolling_window}"] = float(rolling_vol_series.iloc[-1])
 
     if benchmark_returns is not None:
         metrics["information_ratio"] = information_ratio(

@@ -12,6 +12,7 @@ References:
 import numpy as np
 import pandas as pd
 
+from src.utils.config import get_config_value
 from src.utils.exceptions import DataValidationError
 from src.utils.logger import get_logger
 from src.utils.validation import validate_returns_schema
@@ -86,21 +87,20 @@ def compute_decile_returns(
             df.groupby([decile_col, "date"], observed=False)[return_col].mean().reset_index()
         )
     else:
-        # Value-weighted
-        df["weighted_ret"] = df[return_col] * df[weight_col]
-        decile_ret = (
-            df.groupby([decile_col, "date"], observed=False)
-            .apply(
-                lambda x: (
-                    (x["weighted_ret"].sum() / x[weight_col].sum())
-                    if x[weight_col].sum() > 0
-                    else np.nan
-                ),
-                include_groups=False,
-            )
+        # Value-weighted (vectorized)
+        weighted = (
+            df.assign(weighted_ret=df[return_col] * df[weight_col])
+            .groupby([decile_col, "date"], observed=False)[["weighted_ret", weight_col]]
+            .sum()
             .reset_index()
         )
-        decile_ret = decile_ret.rename(columns={0: return_col})
+        with np.errstate(divide="ignore", invalid="ignore"):
+            weighted[return_col] = np.where(
+                weighted[weight_col] != 0,
+                weighted["weighted_ret"] / weighted[weight_col],
+                np.nan,
+            )
+        decile_ret = weighted[[decile_col, "date", return_col]]
 
     return decile_ret
 
@@ -182,7 +182,7 @@ def run_decile_backtest(
     returns_df: pd.DataFrame,
     score_col: str = "CNOI",
     return_col: str = "ret_fwd",
-    n_deciles: int = 10,
+    n_deciles: int | None = None,
     weight_col: str | None = None,
     lags: int = 3,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -206,6 +206,8 @@ def run_decile_backtest(
         >>> summary[['decile', 'mean_ret', 't_stat']].head()
         >>> ls[['ls_mean', 'ls_tstat']]
     """
+    n_deciles = n_deciles or int(get_config_value("backtest.n_deciles", 10))
+
     if {"ticker", "date", score_col}.difference(cnoi_df.columns):
         raise DataValidationError("CNOI dataframe missing required columns for backtest.")
 
@@ -238,25 +240,27 @@ def run_decile_backtest(
     )
 
     # Summary statistics per decile
-    summary = []
-    for decile in range(1, n_deciles + 1):
-        dec_returns = decile_ret[decile_ret["decile"] == decile][return_col].values
-
-        mean, se_nw, t_stat = newey_west_tstat(dec_returns, lags=lags)
-
-        summary.append(
+    def _summarize_decile(series: pd.Series) -> pd.Series:
+        values = series.to_numpy()
+        mean, se_nw, t_stat = newey_west_tstat(values, lags=lags)
+        std = float(np.nanstd(values))
+        return pd.Series(
             {
-                "decile": decile,
                 "mean_ret": mean,
-                "std_ret": np.nanstd(dec_returns),
+                "std_ret": std,
                 "se_nw": se_nw,
                 "t_stat": t_stat,
-                "sharpe": mean / np.nanstd(dec_returns) if np.nanstd(dec_returns) > 0 else np.nan,
-                "n_obs": len(dec_returns),
+                "sharpe": (mean / std) if std > 0 else np.nan,
+                "n_obs": len(values),
             }
         )
 
-    summary_df = pd.DataFrame(summary)
+    summary_df = (
+        decile_ret.groupby("decile", observed=False)[return_col]
+        .apply(_summarize_decile)
+        .unstack()
+        .reset_index()
+    )
 
     # Long-short
     ls_ret = compute_long_short(decile_ret, low_decile=1, high_decile=n_deciles)

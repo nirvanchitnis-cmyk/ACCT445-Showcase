@@ -1,0 +1,5 @@
+outs:
+- md5: 9f8e9137f7dcb1980122ed501c74dbce
+  size: 5234
+  hash: md5
+  path: cnoi_returns_merged.csv

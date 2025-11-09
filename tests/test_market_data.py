@@ -101,6 +101,60 @@ class TestFetchBulkData:
             market_data.fetch_bulk_data([], "2023-01-01", "2023-01-05")
 
 
+class TestParallelTickerFetch:
+    """Tests for the parallel download helper."""
+
+    def test_parallel_fetch_handles_failures(self, tmp_path, monkeypatch):
+        _configure_cache(tmp_path, monkeypatch)
+
+        template = pd.DataFrame(
+            {
+                "date": pd.date_range("2023-01-01", periods=2, freq="D"),
+                "ticker": ["AAA", "AAA"],
+                "close": [10.0, 10.5],
+                "ret": [None, 0.05],
+            }
+        )
+
+        def fake_fetch(ticker, *_, **__):
+            if ticker == "AAA":
+                return template
+            raise DataDownloadError("boom")
+
+        monkeypatch.setattr(market_data, "fetch_ticker_data", fake_fetch)
+
+        result = market_data.parallel_ticker_fetch(
+            ["AAA", "BBB"],
+            "2023-01-01",
+            "2023-01-05",
+            n_jobs=1,
+        )
+        assert result["ticker"].unique().tolist() == ["AAA"]
+
+    def test_fetch_bulk_data_delegates_to_parallel(self, monkeypatch):
+        called = {"value": False}
+
+        def fake_parallel(*args, **kwargs):
+            called["value"] = True
+            return pd.DataFrame(
+                {
+                    "date": pd.date_range("2023-01-01", periods=1),
+                    "ticker": ["AAA"],
+                    "close": [1.0],
+                    "ret": [0.0],
+                }
+            )
+
+        monkeypatch.setattr(market_data, "parallel_ticker_fetch", fake_parallel)
+        market_data.fetch_bulk_data(
+            ["AAA"],
+            "2023-01-01",
+            "2023-01-05",
+            parallel=True,
+        )
+        assert called["value"]
+
+
 class TestValidateDataQuality:
     """Tests for validation helper."""
 

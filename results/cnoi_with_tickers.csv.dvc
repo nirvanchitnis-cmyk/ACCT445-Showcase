@@ -1,0 +1,5 @@
+outs:
+- md5: 4494a90885b08ddc4807e6f38168d0d1
+  size: 361098
+  hash: md5
+  path: cnoi_with_tickers.csv

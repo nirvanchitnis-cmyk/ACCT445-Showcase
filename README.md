@@ -122,6 +122,44 @@ poetry install
 
 **No large files required!** Sample CNOI data (top/bottom 20 banks) included in `config/`.
 
+### Data Versioning (DVC)
+
+This project versions datasets with [DVC](https://dvc.org/):
+
+- `config/sample_cnoi.csv` (sample CNOI universe)
+- `data/cache/` (SEC/yfinance cache artifacts)
+- `results/*.csv` (notebook outputs)
+
+After cloning:
+
+```bash
+pip install -r requirements.txt   # installs dvc>=3
+dvc pull                          # fetches tracked datasets
+```
+
+When regenerating data locally:
+
+```bash
+# Re-run notebooks or scripts that update CSVs/cache
+dvc add config/sample_cnoi.csv data/cache results/*.csv
+dvc push  # upload to the configured remote
+```
+
+Checkpoint reports in `results/checkpoints/` stay in git for easy diffing; only heavy CSVs/caches rely on DVC.
+
+### Pre-commit Hooks
+
+Quality gates run locally via [pre-commit](https://pre-commit.com/):
+
+```bash
+pip install -r requirements.txt  # installs pre-commit
+pre-commit install               # set up git hooks
+pre-commit run --all-files       # optional: run everything once
+```
+
+Hooks enforce Black + Ruff style, whitespace hygiene, YAML validation, file-size guards, `pytest --cov=src --cov-fail-under=80`, and `dvc status`.
+Need to skip in an emergency? Use `SKIP=pytest-check pre-commit run --all-files` for a single run or `git commit --no-verify` (not recommended).
+
 ---
 
 ## Usage

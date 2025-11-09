@@ -57,6 +57,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Runtime caches
+.cache/
+
 # Pytest
 .pytest_cache/
 .coverage

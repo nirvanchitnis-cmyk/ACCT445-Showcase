@@ -11,7 +11,6 @@ from src.data.cik_ticker_mapper import (
     enrich_cnoi_with_tickers,
     fetch_sec_ticker_mapping,
     get_ticker_batch,
-    load_override_mapping,
     map_cik_to_ticker,
 )
 from src.utils.exceptions import DataValidationError, ExternalAPIError
