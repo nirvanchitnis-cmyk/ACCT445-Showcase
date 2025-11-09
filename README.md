@@ -147,6 +147,19 @@ dvc push  # upload to the configured remote
 
 Checkpoint reports in `results/checkpoints/` stay in git for easy diffing; only heavy CSVs/caches rely on DVC.
 
+### Pre-commit Hooks
+
+Quality gates run locally via [pre-commit](https://pre-commit.com/):
+
+```bash
+pip install -r requirements.txt  # installs pre-commit
+pre-commit install               # set up git hooks
+pre-commit run --all-files       # optional: run everything once
+```
+
+Hooks enforce Black + Ruff style, whitespace hygiene, YAML validation, file-size guards, `pytest --cov=src --cov-fail-under=80`, and `dvc status`.
+Need to skip in an emergency? Use `SKIP=pytest-check pre-commit run --all-files` for a single run or `git commit --no-verify` (not recommended).
+
 ---
 
 ## Usage

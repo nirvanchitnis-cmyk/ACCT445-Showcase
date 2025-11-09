@@ -1,0 +1,43 @@
+[general]
+random_seed = 42
+log_level = "INFO"
+
+[data]
+cnoi_file = "config/sample_cnoi.csv"
+cache_dir = "data/cache"
+results_dir = "results"
+
+[market_data]
+start_date = "2023-01-01"
+end_date = "2024-12-31"
+rate_limit_calls_per_second = 2.0
+max_retries = 3
+use_cache = true
+
+[backtest]
+n_deciles = 10
+weighting = "equal"
+lag_days = 2
+rebalance_frequency = "Q"
+
+[transaction_costs]
+avg_spread_bps = 5.0
+commission_bps = 1.0
+avg_impact_bps = 2.0
+assumed_turnover = 0.5
+
+[risk_metrics]
+var_confidence = 0.95
+periods_per_year = 252
+risk_free_rate = 0.03
+
+[robustness]
+n_bootstrap = 1000
+n_permutations = 1000
+bootstrap_confidence = 0.95
+
+[panel_regression]
+entity_effects = true
+time_effects = true
+cluster_by_entity = true
+max_lags = 4

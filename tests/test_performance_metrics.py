@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -18,6 +20,7 @@ from src.utils.performance_metrics import (
     kurtosis,
     max_drawdown,
     omega_ratio,
+    rolling_volatility,
     sharpe_ratio,
     skewness,
     sortino_ratio,
@@ -150,6 +153,27 @@ class TestOmegaRatio:
         assert omega_ratio(returns) < 1.0
 
 
+class TestRollingVolatility:
+    """Rolling volatility behavior."""
+
+    def test_rolling_volatility_matches_manual(self) -> None:
+        returns = pd.Series([0.01, -0.005, 0.015, 0.0, 0.01])
+        window = 3
+        result = rolling_volatility(returns, window=window, periods_per_year=252)
+        manual = returns.rolling(window=window, min_periods=window).std(ddof=1) * math.sqrt(252)
+        pd.testing.assert_series_equal(result, manual)
+
+    def test_rolling_volatility_handles_short_series(self) -> None:
+        returns = pd.Series([0.01, -0.02, 0.015])
+        series = rolling_volatility(returns, window=5, periods_per_year=252)
+        assert np.isfinite(series.iloc[-1])
+
+    def test_rolling_volatility_invalid_window(self) -> None:
+        returns = pd.Series([0.01, 0.02])
+        with pytest.raises(ValueError):
+            rolling_volatility(returns, window=1)
+
+
 class TestComputeAllMetrics:
     """Integration tests for compute_all_metrics."""
 
@@ -168,6 +192,7 @@ class TestComputeAllMetrics:
             "skewness",
             "kurtosis",
             "omega",
+            "rolling_vol_21",
         }
         assert required_keys.issubset(metrics.keys())
 
