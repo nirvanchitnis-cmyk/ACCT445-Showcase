@@ -118,3 +118,65 @@ def sample_market_returns(sample_event_study_returns: pd.DataFrame) -> pd.Series
     daily = sample_event_study_returns.groupby("date")["return"].mean()
     daily.name = "mkt_ret"
     return daily
+
+
+@pytest.fixture
+def sample_panel_data() -> pd.DataFrame:
+    """Synthetic panel dataset for regression tests."""
+    np.random.seed(321)
+    tickers = [f"BANK{i:02d}" for i in range(12)]
+    quarters = pd.period_range("2020Q1", periods=10, freq="Q")
+
+    rows = []
+    for ticker in tickers:
+        entity_alpha = np.random.normal(0, 0.005)
+        for quarter in quarters:
+            time_beta = np.random.normal(0, 0.003)
+            cnoi = np.random.uniform(5, 30)
+            log_mcap = np.random.uniform(20, 26)
+            ret = (
+                entity_alpha
+                + time_beta
+                - 0.002 * cnoi
+                + 0.0005 * log_mcap
+                + np.random.normal(0, 0.01)
+            )
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "quarter": quarter,
+                    "CNOI": cnoi,
+                    "log_mcap": log_mcap,
+                    "ret_fwd": ret,
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
+@pytest.fixture
+def dimension_data() -> pd.DataFrame:
+    """Synthetic dataset with all seven CNOI dimensions for dimension analysis tests."""
+    np.random.seed(42)
+    tickers = [f"STOCK{i:02d}" for i in range(30)]
+    quarters = pd.period_range("2020Q1", periods=10, freq="Q")
+    dim_keys = list("DGRJTSX")
+
+    rows = []
+    for quarter in quarters:
+        for ticker in tickers:
+            dims = {dim: np.random.uniform(5, 15) for dim in dim_keys}
+            ret_fwd = -0.004 * dims["S"] - 0.003 * dims["R"] + np.random.normal(0, 0.01)
+            rows.append(
+                {
+                    "ticker": ticker,
+                    "quarter": quarter,
+                    "date": quarter.to_timestamp(),
+                    **dims,
+                    "CNOI": sum(dims.values()),
+                    "ret_fwd": ret_fwd,
+                    "market_cap": np.random.uniform(5e8, 5e10),
+                }
+            )
+
+    return pd.DataFrame(rows)

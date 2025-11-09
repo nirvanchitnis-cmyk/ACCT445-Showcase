@@ -11,6 +11,7 @@ yfinance>=0.2.0
 # Statistical analysis
 scipy>=1.11.0
 statsmodels>=0.14.0
+linearmodels>=5.3.0
 
 # Visualization
 matplotlib>=3.8.0

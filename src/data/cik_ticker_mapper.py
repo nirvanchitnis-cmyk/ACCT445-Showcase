@@ -10,22 +10,27 @@ References:
 """
 
 import time
+from pathlib import Path
 
 import pandas as pd
-import requests
 
+import src.data.sec_api_client as sec_api_client
 from src.utils.exceptions import DataValidationError, ExternalAPIError
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+OVERRIDE_PATH = PROJECT_ROOT / "config" / "cik_ticker_overrides.csv"
 
-def fetch_sec_ticker_mapping(cache_path: str | None = None) -> pd.DataFrame:
+
+def fetch_sec_ticker_mapping(cache_path: str | None = None, use_cache: bool = True) -> pd.DataFrame:
     """
     Fetch official SEC CIK → Ticker mapping from SEC API.
 
     Args:
         cache_path: Optional path to cache the mapping CSV
+        use_cache: Whether to honor the SEC client cache (24h TTL)
 
     Returns:
         DataFrame with columns: cik, ticker, title (company name), exchange
@@ -36,35 +41,19 @@ def fetch_sec_ticker_mapping(cache_path: str | None = None) -> pd.DataFrame:
            cik  ticker                   title exchange
         0  72971   WFC  WELLS FARGO & COMPANY   NYSE
     """
-    url = "https://www.sec.gov/files/company_tickers.json"
-
-    # SEC requires User-Agent header
-    headers = {
-        "User-Agent": "ACCT445-Showcase/1.0 (contact: nirvanchitnis@users.noreply.github.com)",
-        "Accept-Encoding": "gzip, deflate",
-        "Accept": "application/json",
-    }
-
-    logger.info("Fetching SEC ticker mapping from %s", url)
+    logger.info("Fetching SEC ticker mapping via cached client")
     try:
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        raise ExternalAPIError("Unable to download SEC ticker mapping") from exc
+        mapping = sec_api_client.fetch_sec_ticker_mapping(use_cache=use_cache)
+    except ExternalAPIError:
+        raise
+    except Exception as exc:  # pragma: no cover - defensive guard
+        raise ExternalAPIError("Unexpected error fetching SEC mapping") from exc
 
-    # API returns dict with numeric keys
-    try:
-        data = response.json()
-    except ValueError as exc:
-        raise ExternalAPIError("SEC ticker response was not valid JSON") from exc
-
-    # Convert to DataFrame
-    df = pd.DataFrame(
-        [
-            {"cik": int(v["cik_str"]), "ticker": v["ticker"], "title": v["title"]}
-            for v in data.values()
-        ]
-    )
+    records = [
+        {"cik": int(cik), "ticker": payload["ticker"], "title": payload["title"]}
+        for cik, payload in mapping.items()
+    ]
+    df = pd.DataFrame.from_records(records, columns=["cik", "ticker", "title"])
 
     logger.info("Fetched %s company ticker mappings", len(df))
 
@@ -74,6 +63,38 @@ def fetch_sec_ticker_mapping(cache_path: str | None = None) -> pd.DataFrame:
         logger.info("Cached mapping to %s", cache_path)
 
     return df
+
+
+def load_override_mapping(path: str | Path | None = None) -> pd.DataFrame:
+    """
+    Load manual CIK → ticker overrides when SEC data is incomplete.
+
+    Args:
+        path: Optional path to override CSV (defaults to config/cik_ticker_overrides.csv)
+
+    Returns:
+        DataFrame with columns: cik, ticker, company_name (may be empty)
+    """
+
+    target = Path(path) if path is not None else OVERRIDE_PATH
+    if not target.exists():
+        logger.debug("No override mapping found at %s", target)
+        return pd.DataFrame(columns=["cik", "ticker", "company_name"])
+
+    overrides = pd.read_csv(target)
+    required_cols = {"cik", "ticker"}
+    if not required_cols.issubset(overrides.columns):
+        raise DataValidationError(
+            f"Override mapping at {target} missing columns: {sorted(required_cols - set(overrides.columns))}"
+        )
+
+    overrides = overrides.copy()
+    overrides["cik"] = overrides["cik"].astype(int)
+    if "company_name" not in overrides.columns:
+        overrides["company_name"] = None
+
+    logger.info("Loaded %s manual CIK overrides from %s", len(overrides), target)
+    return overrides
 
 
 def map_cik_to_ticker(cik: int, mapping_df: pd.DataFrame) -> str | None:
@@ -130,12 +151,32 @@ def enrich_cnoi_with_tickers(
     cnoi_df = cnoi_df.copy()
     cnoi_df[cik_col] = cnoi_df[cik_col].astype(int)
 
+    overrides = load_override_mapping()
+
     # Merge
     enriched = cnoi_df.merge(
         mapping_df[["cik", "ticker", "title"]], left_on=cik_col, right_on="cik", how="left"
     )
 
     enriched = enriched.rename(columns={"title": "company_name"})
+
+    if not overrides.empty:
+        overrides = overrides.rename(
+            columns={"ticker": "override_ticker", "company_name": "override_company_name"}
+        )
+        enriched = enriched.merge(overrides, on="cik", how="left")
+        missing_before = int(enriched["ticker"].isna().sum())
+        enriched["ticker"] = enriched["ticker"].combine_first(enriched["override_ticker"])
+        if "company_name" in enriched.columns:
+            enriched["company_name"] = enriched["company_name"].combine_first(
+                enriched["override_company_name"]
+            )
+        else:
+            enriched["company_name"] = enriched["override_company_name"]
+        overrides_used = missing_before - int(enriched["ticker"].isna().sum())
+        enriched = enriched.drop(columns=["override_ticker", "override_company_name"])
+        if overrides_used > 0:
+            logger.info("Applied %s manual ticker overrides.", overrides_used)
 
     # Report missing tickers
     missing = enriched["ticker"].isna().sum()
@@ -165,10 +206,18 @@ def get_ticker_batch(ciks: list, rate_limit_delay: float = 0.1) -> dict[int, str
     """
     # Fetch full mapping once (more efficient than individual requests)
     mapping_df = fetch_sec_ticker_mapping()
+    overrides = load_override_mapping()
+    override_lookup = (
+        dict(zip(overrides["cik"], overrides["ticker"])) if not overrides.empty else {}
+    )
 
     result = {}
     for cik in ciks:
         ticker = map_cik_to_ticker(cik, mapping_df)
+        if not ticker:
+            ticker = override_lookup.get(cik)
+            if ticker:
+                logger.debug("Using manual override for CIK %s -> %s", cik, ticker)
         if ticker:
             result[cik] = ticker
         else:

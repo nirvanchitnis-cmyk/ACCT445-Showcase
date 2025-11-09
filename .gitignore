@@ -33,9 +33,11 @@ env/
 # Data files (keep sample only)
 data/raw/
 data/interim/
+data/cache/
 *.parquet
 *.pkl
 *.h5
+config/sec_ticker_mapping.csv
 
 # Results (gitignore generated results, keep templates)
 results/*.csv
@@ -59,6 +61,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
 
 # MyPy
 .mypy_cache/
