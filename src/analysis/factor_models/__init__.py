@@ -16,6 +16,10 @@ from src.analysis.factor_models.fama_french import (
     compute_expected_return,
     estimate_factor_loadings,
 )
+from src.analysis.factor_models.standard_errors import (
+    estimate_alpha_with_policy,
+    fit_with_policy,
+)
 
 __all__ = [
     "estimate_factor_loadings",
@@ -28,4 +32,6 @@ __all__ = [
     "rolling_alpha",
     "plot_rolling_dsr",
     "compute_alpha_with_dsr",
+    "fit_with_policy",
+    "estimate_alpha_with_policy",
 ]

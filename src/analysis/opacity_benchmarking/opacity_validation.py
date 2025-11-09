@@ -61,7 +61,8 @@ def compute_cnoi_readability_correlations(
         ...     'flesch_ease': [60.0, 50.0, 40.0]
         ... })
         >>> summary = compute_cnoi_readability_correlations(cnoi_df, readability_df)
-        >>> assert summary.loc[summary['Metric'] == 'fog_index', 'Correlation with CNOI'].values[0] > 0
+        >>> row = summary.loc[summary['Metric'] == 'fog_index']
+        >>> assert row['Correlation with CNOI'].values[0] > 0
 
     Notes:
         Uses Pearson correlation with two-tailed t-test for significance.
@@ -509,8 +510,46 @@ def intraclass_correlation_coefficient(
     measure_col: str,
     score_col: str,
     icc_type: str = "ICC(2,1)",
+    n_boot: int = 1000,
+    seed: int = 42,
 ) -> dict:
-    """Compute ICC for test-retest reliability (CNOI Stability dimension)."""
+    """
+    Compute ICC for test-retest reliability (CNOI Stability dimension).
+
+    Implements ICC(2,k) - two-way random effects, absolute agreement, average measures.
+    Includes bootstrap confidence intervals (Shrout & Fleiss 1979; McGraw & Wong 1996).
+
+    Args:
+        data: Panel data with subjects measured multiple times
+        subject_col: Subject/firm identifier
+        measure_col: Measurement occasion (e.g., quarter, filing date)
+        score_col: Score to measure (e.g., CNOI)
+        icc_type: Type of ICC (currently supports "ICC(2,1)")
+        n_boot: Number of bootstrap replications for CI (default 1000)
+        seed: Random seed for reproducibility
+
+    Returns:
+        {
+            'icc': float,            # Point estimate
+            'ci_lower': float,       # 95% CI lower bound (bootstrap)
+            'ci_upper': float,       # 95% CI upper bound (bootstrap)
+            'f_stat': float,         # F-statistic for ICC=0 test
+            'p_value': float,        # P-value for ICC=0 test
+            'n_subjects': int,
+            'n_measures': int,
+            'icc_type': str,
+            'interpretation': str,   # Poor/Moderate/Good/Excellent
+        }
+
+    Example:
+        >>> icc_result = intraclass_correlation_coefficient(
+        ...     df, subject_col='cik', measure_col='quarter', score_col='CNOI'
+        ... )
+        >>> print(
+        ...     f"ICC: {icc_result['icc']:.3f}, "
+        ...     f"95% CI [{icc_result['ci_lower']:.3f}, {icc_result['ci_upper']:.3f}]"
+        ... )
+    """
     from scipy import stats as sp_stats
 
     pivot = data.pivot_table(
@@ -524,28 +563,68 @@ def intraclass_correlation_coefficient(
     if n_measures < 2:
         raise ValueError("Need >= 2 measurements per subject")
 
-    grand_mean = pivot.values.mean()
-    subject_means = pivot.mean(axis=1)
+    def compute_icc(X):
+        """Helper to compute ICC from data matrix."""
+        n, k = X.shape
+        grand = X.mean()
+        mean_subjects = X.mean(axis=1, keepdims=True)
 
+        ss_between = k * np.sum((mean_subjects - grand) ** 2)
+        ss_within = np.sum((X - mean_subjects) ** 2)
+
+        ms_between = ss_between / (n - 1)
+        ms_within = ss_within / (n * (k - 1))
+
+        # ICC(2,k) formula
+        icc_val = (ms_between - ms_within) / (ms_between + (k - 1) * ms_within)
+        return np.clip(icc_val, 0, 1)
+
+    # Point estimate
+    X = pivot.values
+    icc = compute_icc(X)
+
+    # F-statistic for H0: ICC = 0
+    grand_mean = X.mean()
+    subject_means = X.mean(axis=1)
     ss_between = n_measures * np.sum((subject_means - grand_mean) ** 2)
-    ss_within = np.sum((pivot.values - subject_means.values[:, np.newaxis]) ** 2)
-
+    ss_within = np.sum((X - subject_means[:, np.newaxis]) ** 2)
     ms_between = ss_between / (n_subjects - 1)
     ms_within = ss_within / (n_subjects * (n_measures - 1))
-
-    icc = (ms_between - ms_within) / (ms_between + (n_measures - 1) * ms_within)
-    icc = np.clip(icc, 0, 1)
 
     f_stat = ms_between / ms_within if ms_within > 0 else np.nan
     p_value = 1 - sp_stats.f.cdf(f_stat, n_subjects - 1, n_subjects * (n_measures - 1))
 
+    # Bootstrap confidence interval
+    rng = np.random.default_rng(seed)
+    boot_icc = []
+    for _ in range(n_boot):
+        # Resample subjects with replacement
+        idx = rng.integers(0, n_subjects, size=n_subjects)
+        X_boot = X[idx, :]
+        boot_icc.append(compute_icc(X_boot))
+
+    ci_lower, ci_upper = np.percentile(boot_icc, [2.5, 97.5])
+
+    # Interpretation (Koo & Li 2016 guidelines)
+    if icc < 0.5:
+        interpretation = "Poor"
+    elif icc < 0.75:
+        interpretation = "Moderate"
+    elif icc < 0.90:
+        interpretation = "Good"
+    else:
+        interpretation = "Excellent"
+
     return {
-        "icc": icc,
-        "f_stat": f_stat,
-        "p_value": p_value,
-        "n_subjects": n_subjects,
-        "n_measures": n_measures,
-        "interpretation": "Good" if icc > 0.6 else "Moderate" if icc > 0.4 else "Poor",
+        "icc": float(icc),
+        "ci_lower": float(ci_lower),
+        "ci_upper": float(ci_upper),
+        "f_stat": float(f_stat),
+        "p_value": float(p_value),
+        "n_subjects": int(n_subjects),
+        "n_measures": int(n_measures),
+        "icc_type": icc_type,
+        "interpretation": interpretation,
     }
 
 
