@@ -6,6 +6,18 @@
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 [![Publication Ready](https://img.shields.io/badge/status-publication--ready-success.svg)](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/releases/tag/v2.0.0)
 
+---
+
+## 🌐 **[View Live Research Website →](https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/)**
+
+**Professional academic landing page with:**
+- ✨ 4 Publication-quality charts (McKinsey-grade design)
+- 📊 Interactive methodology (expandable sections)
+- 📚 18 Citations with DOI links
+- 🔬 Full reproducibility (415 tests, checksums, Docker)
+
+---
+
 **Research Question:** Does bank disclosure opacity (CNOI) predict stock returns and risk?
 
 **Status:** 🎓 **Publication-ready research** with factor-adjusted alphas, causal inference (DiD), robust event tests, and construct validation. Includes production deployment infrastructure.
