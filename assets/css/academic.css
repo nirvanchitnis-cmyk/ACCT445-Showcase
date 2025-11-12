@@ -516,9 +516,9 @@ figcaption {
     overflow-x: auto;
 }
 
-  .katex {
-      font-size: 1.1em;
-  }
+.katex {
+    font-size: 1.1em;
+}
 
 /* ==========================================================================
    DARK MODE + TOP NAV
@@ -577,6 +577,22 @@ body.dark .nav-links a { color: #e5e7eb; }
     font-family: var(--font-mono);
 }
 body.dark .theme-toggle { border-color: #334155; color: #e5e7eb; }
+
+/* Skip link for keyboard users */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 8px;
+    background: #111827;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    z-index: 1000;
+    text-decoration: none;
+}
+.skip-link:focus {
+    top: 8px;
+}
 
 /* ==========================================================================
    CITATIONS

@@ -45,6 +45,19 @@
       });
     })();
   </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const path = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+      document.querySelectorAll('.nav-links a').forEach(a => {
+        const href = (a.getAttribute('href') || '').split('#')[0].toLowerCase();
+        if ((path === '' || path === 'index.html') && (href === '' || href === 'index.html')) {
+          a.setAttribute('aria-current','page');
+        } else if (path === 'methodology.html' && href === 'methodology.html') {
+          a.setAttribute('aria-current','page');
+        }
+      });
+    });
+  </script>
   <link rel="stylesheet" href="assets/css/paper.css" />
   <link rel="stylesheet" href="assets/css/academic.css" />
   <link rel="stylesheet" href="assets/css/methodology.css" />
@@ -59,11 +72,13 @@
   </style>
 </head>
 <body>
+<a class="skip-link" href="#TOC">Skip to content</a>
 <nav class="topnav" role="navigation" aria-label="Primary">
   <div class="nav-inner">
     <a href="index.html" class="brand">ACCT445</a>
     <div class="nav-links">
       <a href="index.html#results">Results</a>
+      <a href="methodology.html">Methodology</a>
       <a href="index.html#notebooks">Notebooks</a>
       <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase">GitHub</a>
       <button id="themeToggle" class="theme-toggle" aria-pressed="false" aria-label="Toggle dark mode">Dark</button>
