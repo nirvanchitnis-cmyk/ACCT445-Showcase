@@ -30,6 +30,9 @@ jobs:
         run: |
           cd docs
           make html
+      - name: Create mock results if missing
+        run: |
+          python scripts/create_mock_results.py --results-dir results || true
       - name: Generate research charts
         run: |
           python scripts/generate_charts.py
