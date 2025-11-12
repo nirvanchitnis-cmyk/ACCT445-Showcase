@@ -1,6 +1,8 @@
 # ACCT 445 · Bank Disclosure Opacity and Market Performance
 
 [![Tests](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/test.yml/badge.svg)](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/test.yml)
+[![Accessibility](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/accessibility.yml/badge.svg)](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/accessibility.yml)
+[![Lighthouse](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/lighthouse.yml/badge.svg)](https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/actions/workflows/lighthouse.yml)
 [![codecov](https://codecov.io/gh/nirvanchitnis-cmyk/ACCT445-Showcase/branch/main/graph/badge.svg)](https://codecov.io/gh/nirvanchitnis-cmyk/ACCT445-Showcase)
 [![Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
