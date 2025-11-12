@@ -231,13 +231,12 @@ def generate_manifest(
     manifest = {}
     for name, spec in factor_files.items():
         # Handle simple path or full spec dict
-        if isinstance(spec, (str, Path)):
+        if isinstance(spec, str | Path):
             path = Path(spec)
             if not path.exists():
                 logger.warning("Skipping %s - file not found: %s", name, path)
                 continue
-            sha = sha256_file(path)
-            manifest[name] = {"path": str(path), "sha256": sha}
+            entry = {"path": str(path), "sha256": sha256_file(path)}
         else:
             # Full spec with provenance
             path = Path(spec["path"])
@@ -254,9 +253,9 @@ def generate_manifest(
                 nyse_breakpoints=spec.get("nyse_breakpoints", True),
                 description=spec.get("description", ""),
             )
-            manifest[name] = entry
+        manifest[name] = entry
 
-        logger.info("Added %s: %s (SHA-256: %s)", name, path, sha[:16] + "...")
+        logger.info("Added %s: %s (SHA-256: %s)", name, path, entry["sha256"][:16] + "...")
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,7 +263,7 @@ def generate_manifest(
     logger.info("Factor manifest saved to %s (%d files)", output_path, len(manifest))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - manual invocation helper
     # Example usage: verify existing factors or generate new manifest
     import sys
 

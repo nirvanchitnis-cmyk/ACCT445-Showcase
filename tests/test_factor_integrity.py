@@ -106,6 +106,30 @@ class TestGenerateManifest:
         assert "ff5_daily" in manifest
         assert "missing" not in manifest  # Skipped
 
+    def test_includes_provenance_when_spec_provided(self, temp_factor_files):
+        """Test manifest captures provenance metadata when provided."""
+        tmpdir = temp_factor_files["tmpdir"]
+        manifest_path = tmpdir / "manifest_with_provenance.json"
+
+        factor_files = {
+            "ff5_daily": {
+                "path": temp_factor_files["ff5"],
+                "source_url": "https://example.com/ff5",
+                "frequency": "daily",
+                "crsp_format": "CIZ",
+                "nyse_breakpoints": False,
+                "description": "Test provenance entry",
+            }
+        }
+
+        generate_manifest(factor_files, output_path=manifest_path)
+
+        manifest = json.loads(manifest_path.read_text())
+        entry = manifest["ff5_daily"]
+        assert entry["provenance"]["source_url"] == "https://example.com/ff5"
+        assert entry["provenance"]["crsp_format"] == "CIZ"
+        assert entry["provenance"]["nyse_breakpoints"] is False
+
 
 class TestVerifyFactors:
     """Tests for verify_factors()."""

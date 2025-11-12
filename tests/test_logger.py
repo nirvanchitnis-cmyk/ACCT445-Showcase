@@ -42,6 +42,16 @@ def test_rotating_handler_configured(tmp_path):
     assert rotating_handlers, "expected a RotatingFileHandler to be attached"
 
 
+def test_plain_file_handler_used_when_rotation_disabled(tmp_path):
+    """When rotation is disabled a plain FileHandler should be attached."""
+    log_file = tmp_path / "plain.log"
+    logger = get_logger("acct445.plain_test", log_file=log_file, rotate=False)
+    file_handlers = [
+        handler for handler in logger.handlers if handler.__class__.__name__ == "FileHandler"
+    ]
+    assert file_handlers, "expected a standard FileHandler when rotate=False"
+
+
 def test_json_formatter_handles_exceptions():
     """Ensure JSONFormatter can render exception info."""
     formatter = JSONFormatter()

@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 from scipy import stats
 
+import src.utils.performance_metrics as perf
 from src.utils.performance_metrics import (
     annualized_return,
     annualized_volatility,
@@ -208,3 +209,61 @@ class TestComputeAllMetrics:
         )
         for key in ("information_ratio", "downside_capture", "upside_capture"):
             assert key in metrics
+
+
+class TestEdgeCases:
+    """Edge-case coverage for branch-heavy helpers."""
+
+    def test_validate_returns_enforces_length(self):
+        with pytest.raises(ValueError):
+            perf.annualized_volatility(pd.Series([0.01]))
+
+    def test_annualized_return_handles_non_positive_growth(self):
+        returns = pd.Series([-1.0, 0.0, 0.01])
+        approx = perf.annualized_return(returns, periods_per_year=1)
+        assert approx == pytest.approx(returns.mean())
+
+    def test_sharpe_ratio_zero_volatility(self):
+        series = pd.Series([0.01, 0.01, 0.01])
+        assert perf.sharpe_ratio(series) == np.inf
+
+    def test_sortino_ratio_without_downside(self):
+        series = pd.Series([0.02, 0.03, 0.025])
+        assert perf.sortino_ratio(series) == np.inf
+
+    def test_information_ratio_requires_overlap(self):
+        portfolio = pd.Series([0.01, 0.02], index=pd.date_range("2024-01-01", periods=2, freq="D"))
+        benchmark = pd.Series([0.01, 0.02], index=pd.date_range("2025-01-01", periods=2, freq="D"))
+        with pytest.raises(ValueError):
+            perf.information_ratio(portfolio, benchmark)
+
+    def test_information_ratio_zero_tracking_error(self):
+        returns = pd.Series([0.01, 0.02], index=pd.date_range("2024-01-01", periods=2))
+        assert perf.information_ratio(returns, returns) == -np.inf
+
+    def test_value_at_risk_rejects_unknown_method(self, normal_returns):
+        with pytest.raises(ValueError):
+            perf.value_at_risk(normal_returns, method="gaussian")
+
+    def test_conditional_var_handles_empty_tail(self, monkeypatch):
+        returns = pd.Series([0.01, 0.02, 0.03])
+        monkeypatch.setattr(perf, "value_at_risk", lambda *_, **__: -1.0)
+        assert perf.conditional_var(returns) == -1.0
+
+    def test_tail_ratio_returns_infinite_when_left_tail_zero(self):
+        returns = pd.Series([0.0, 0.0, 0.1, 0.2, 0.3])
+        assert perf.tail_ratio(returns) == np.inf
+
+    def test_downside_capture_no_down_periods(self):
+        benchmark = pd.Series([0.01, 0.02, 0.03])
+        portfolio = pd.Series([0.02, 0.03, 0.04])
+        assert np.isnan(perf.downside_capture(portfolio, benchmark))
+
+    def test_upside_capture_no_up_periods(self):
+        benchmark = pd.Series([-0.01, -0.02, -0.03])
+        portfolio = pd.Series([-0.01, -0.02, -0.03])
+        assert np.isnan(perf.upside_capture(portfolio, benchmark))
+
+    def test_omega_ratio_infinite_without_losses(self):
+        returns = pd.Series([0.01, 0.02, 0.03])
+        assert perf.omega_ratio(returns) == np.inf

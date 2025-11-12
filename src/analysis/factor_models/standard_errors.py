@@ -232,7 +232,7 @@ def estimate_alpha_with_policy(
     }
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - informational CLI usage
     print("Standard Errors Policy Module")
     print("==============================")
     print("SE type selection:")

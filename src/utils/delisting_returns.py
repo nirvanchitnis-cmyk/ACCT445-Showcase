@@ -74,11 +74,17 @@ def apply_delisting_returns(
         else:
             # Find nearest date (forward fill logic)
             idx_array = returns.index
-            nearest_idx = idx_array[idx_array >= delist_date_dt].min() if any(idx_array >= delist_date_dt) else None
+            nearest_idx = (
+                idx_array[idx_array >= delist_date_dt].min()
+                if any(idx_array >= delist_date_dt)
+                else None
+            )
 
             if nearest_idx is None:
                 logger.debug(
-                    "Delisting date %s for %s is after data end - no adjustment", delist_date, ticker
+                    "Delisting date %s for %s is after data end - no adjustment",
+                    delist_date,
+                    ticker,
                 )
                 continue
             delist_idx = nearest_idx
@@ -116,7 +122,11 @@ def apply_delisting_returns(
         pct_replaced,
     )
 
-    return returns, {"n_tickers": n_adjustments, "n_obs_replaced": n_obs_replaced, "pct_replaced": pct_replaced}
+    return returns, {
+        "n_tickers": n_adjustments,
+        "n_obs_replaced": n_obs_replaced,
+        "pct_replaced": pct_replaced,
+    }
 
 
 def estimate_delisting_sensitivity(
@@ -167,7 +177,7 @@ def estimate_delisting_sensitivity(
     return pd.DataFrame(results)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - documentation helper
     print("Delisting Returns Module")
     print("=" * 50)
     print("Applies Shumway (1997) delisting penalties to correct")

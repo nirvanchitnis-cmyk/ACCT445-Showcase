@@ -63,6 +63,13 @@ def test_estimate_bid_ask_spread_requires_overlap():
         estimate_bid_ask_spread(vol, cap)
 
 
+def test_estimate_bid_ask_spread_nonempty_inputs():
+    """Empty inputs should raise validation errors."""
+    empty = pd.Series(dtype=float)
+    with pytest.raises(DataValidationError):
+        estimate_bid_ask_spread(empty, empty)
+
+
 def test_compute_market_impact_scales_with_trade_size():
     """Larger trades relative to ADV should incur higher impact."""
 
@@ -86,6 +93,12 @@ def test_compute_market_impact_handles_illiquid_names():
     assert compute_market_impact(1e6, avg_daily_volume=0) == 100.0
 
 
+def test_compute_market_impact_requires_positive_trade_value():
+    """Negative trade sizes should raise validation errors."""
+    with pytest.raises(DataValidationError):
+        compute_market_impact(trade_value=-1, avg_daily_volume=1e6)
+
+
 def test_estimate_slippage_urgency_levels(sample_series):
     """Slippage should increase with execution urgency."""
 
@@ -95,6 +108,16 @@ def test_estimate_slippage_urgency_levels(sample_series):
     high = estimate_slippage(spreads, urgency="high")
 
     assert np.all(high > low)
+
+
+def test_estimate_slippage_scalar_input():
+    """Scalar spreads should return scalar slippage."""
+    assert estimate_slippage(5.0, urgency="normal") == pytest.approx(2.5)
+
+
+def test_estimate_slippage_invalid_urgency():
+    with pytest.raises(ValueError):
+        estimate_slippage(5.0, urgency="urgent")
 
 
 def test_apply_transaction_costs_reduces_returns(sample_returns):
@@ -129,3 +152,8 @@ def test_apply_transaction_costs_missing_column_raises(sample_returns):
     df = sample_returns.rename(columns={"ret": "return"})
     with pytest.raises(DataValidationError):
         apply_transaction_costs(df, turnover=0.5)
+
+
+def test_apply_transaction_costs_negative_turnover(sample_returns):
+    with pytest.raises(DataValidationError):
+        apply_transaction_costs(sample_returns, turnover=-0.1)

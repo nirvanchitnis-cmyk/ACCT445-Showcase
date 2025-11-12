@@ -50,6 +50,19 @@ def test_send_alert_logs_warning(caplog: LogCaptureFixture) -> None:
     assert "ALERT: Test alert - Test message" in caplog.text
 
 
+def test_send_alert_logs_email_notice_when_enabled(caplog: LogCaptureFixture, monkeypatch) -> None:
+    caplog.set_level("INFO")
+
+    def _fake_get_config(key, default=None):
+        if key == "alerts.enable_email":
+            return True
+        return default
+
+    monkeypatch.setattr("src.runner.alerts.get_config_value", _fake_get_config)
+    send_alert("Email", "Email enabled path")
+    assert "Email alerts not yet configured; subject=Email" in caplog.text
+
+
 def test_run_daily_update_with_overrides(tmp_path: Path, caplog: LogCaptureFixture) -> None:
     caplog.set_level("INFO")
     cnoi_df, returns_df = _build_sample_frames()

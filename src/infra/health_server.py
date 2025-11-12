@@ -130,7 +130,7 @@ def ping():
     return {"status": "pong", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - manual utility entrypoint
     import uvicorn
 
     print("Starting ACCT445 Health Check Server")

@@ -55,6 +55,25 @@ class TestValidation:
         with pytest.raises(DataValidationError):
             validate_cnoi_schema(bad)
 
+    def test_validate_cnoi_schema_requires_datetime(self, sample_cnoi_data: pd.DataFrame):
+        bad = sample_cnoi_data.copy()
+        bad["filing_date"] = bad["filing_date"].astype(str)
+        with pytest.raises(DataValidationError):
+            validate_cnoi_schema(bad)
+
+    def test_validate_cnoi_schema_empty(self, sample_cnoi_data: pd.DataFrame):
+        empty = sample_cnoi_data.iloc[0:0].copy()
+        with pytest.raises(DataValidationError):
+            validate_cnoi_schema(empty)
+
+    def test_validate_cnoi_schema_logs_duplicates(
+        self, sample_cnoi_data: pd.DataFrame, caplog: pytest.LogCaptureFixture
+    ):
+        duped = pd.concat([sample_cnoi_data, sample_cnoi_data.iloc[[0]]], ignore_index=True)
+        caplog.set_level("WARNING")
+        validate_cnoi_schema(duped)
+        assert "duplicate (cik, filing_date)" in caplog.text
+
     def test_validate_returns_schema(self):
         df = pd.DataFrame(
             {
@@ -76,7 +95,40 @@ class TestValidation:
         with pytest.raises(DataValidationError):
             validate_returns_schema(df)
 
+    def test_validate_returns_schema_empty(self):
+        df = pd.DataFrame(columns=["date", "ticker", "return"])
+        df["date"] = pd.to_datetime(df["date"])
+        with pytest.raises(DataValidationError):
+            validate_returns_schema(df)
+
     def test_validate_event_inputs_errors(self, sample_event_study_returns: pd.DataFrame):
         market = pd.Series([], dtype=float)
+        with pytest.raises(DataValidationError):
+            validate_event_inputs(sample_event_study_returns, market)
+
+    def test_validate_event_inputs_returns_empty(self):
+        returns = pd.DataFrame(columns=["date", "ticker", "return"])
+        returns["date"] = pd.to_datetime(returns["date"])
+        market = pd.Series(
+            [0.01, -0.02, 0.015],
+            index=pd.date_range("2023-01-01", periods=3),
+        )
+        with pytest.raises(DataValidationError):
+            validate_event_inputs(returns, market)
+
+    def test_validate_event_inputs_requires_datetime_date(
+        self, sample_event_study_returns: pd.DataFrame
+    ):
+        returns = sample_event_study_returns.copy()
+        returns["date"] = returns["date"].astype(str)
+        market = pd.Series(
+            [0.01, -0.02, 0.015],
+            index=pd.date_range("2023-01-01", periods=3),
+        )
+        with pytest.raises(DataValidationError):
+            validate_event_inputs(returns, market)
+
+    def test_validate_event_inputs_market_index(self, sample_event_study_returns: pd.DataFrame):
+        market = pd.Series([0.01, 0.02, -0.01], index=[1, 2, 3])
         with pytest.raises(DataValidationError):
             validate_event_inputs(sample_event_study_returns, market)
