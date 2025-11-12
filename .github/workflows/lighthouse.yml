@@ -3,6 +3,8 @@ name: lighthouse
 on:
   push:
     branches: [ main ]
+  schedule:
+    - cron: '0 10 * * *'  # daily at 10:00 UTC (after pa11y)
   workflow_dispatch:
 
 jobs:

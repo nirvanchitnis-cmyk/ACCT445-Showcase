@@ -1,0 +1,13 @@
+{
+  "defaults": {
+    "standard": "WCAG2AA",
+    "level": "error",
+    "timeout": 60000,
+    "wait": 1000
+  },
+  "threshold": 0,
+  "urls": [
+    "https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/",
+    "https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/methodology.html"
+  ]
+}

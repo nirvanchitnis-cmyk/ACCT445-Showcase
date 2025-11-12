@@ -3,6 +3,8 @@ name: accessibility
 on:
   push:
     branches: [ main ]
+  schedule:
+    - cron: '0 9 * * *'  # daily at 09:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -14,9 +16,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install pa11y
-        run: npm i -g pa11y
-      - name: Run pa11y (landing)
-        run: pa11y https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/ --threshold 10
-      - name: Run pa11y (methodology)
-        run: pa11y https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/methodology.html --threshold 10
+      - name: Install pa11y-ci
+        run: npm i -g pa11y-ci
+      - name: Run pa11y-ci against Pages URLs
+        run: pa11y-ci --config .pa11yci.json --threshold 0
