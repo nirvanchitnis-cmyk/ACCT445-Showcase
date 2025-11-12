@@ -18,5 +18,6 @@ jobs:
           urls: |
             https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/
             https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/methodology.html
+          configPath: ./lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: true
