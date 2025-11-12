@@ -38,6 +38,8 @@ jobs:
           # Create _site directory with both landing page and Sphinx docs
           mkdir -p _site
           cp index.html _site/
+          # Include standalone methodology page at the site root
+          if [ -f methodology.html ]; then cp methodology.html _site/; fi
           cp -r assets _site/
           cp -r docs/build/html _site/docs
 
