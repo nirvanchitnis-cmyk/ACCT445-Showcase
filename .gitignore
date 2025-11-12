@@ -1,1 +1,12 @@
 _gh_pages/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+.DS_Store
+.cache/
+.coverage
+coverage.xml
+logs/*.log
+nbconvert.log
+results/*.csv
