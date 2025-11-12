@@ -1,0 +1,22 @@
+name: accessibility
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  pa11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install pa11y
+        run: npm i -g pa11y
+      - name: Run pa11y (landing)
+        run: pa11y https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/ --threshold 10
+      - name: Run pa11y (methodology)
+        run: pa11y https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/methodology.html --threshold 10

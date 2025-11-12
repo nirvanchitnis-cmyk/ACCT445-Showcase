@@ -1,0 +1,20 @@
+name: lighthouse
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lhci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Lighthouse (landing & methodology)
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/
+            https://nirvanchitnis-cmyk.github.io/ACCT445-Showcase/methodology.html
+          uploadArtifacts: true
+          temporaryPublicStorage: true
