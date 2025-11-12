@@ -516,9 +516,67 @@ figcaption {
     overflow-x: auto;
 }
 
-.katex {
-    font-size: 1.1em;
+  .katex {
+      font-size: 1.1em;
+  }
+
+/* ==========================================================================
+   DARK MODE + TOP NAV
+   ========================================================================== */
+
+/* Dark mode */
+body.dark {
+    background: #0f172a; /* slate-900 */
+    color: #e5e7eb;      /* gray-200 */
 }
+body.dark h1, body.dark h2, body.dark h3, body.dark h4 { color: #e5e7eb; }
+body.dark a { color: #93c5fd; }
+body.dark a:hover { color: #fde68a; }
+body.dark .hero { background: #0b2447; }
+body.dark .summary { background: #0b1b31; }
+body.dark .summary-card { background: #111827; border-color: #1f2937; }
+body.dark .result-card { background: #111827; border-color: #1f2937; }
+body.dark .stat-box { background: #0b1b31; }
+body.dark .by-numbers { background: #0b1b31; }
+body.dark .accordion-item { background: #111827; border-color: #1f2937; }
+body.dark .accordion-header { background: #111827; }
+body.dark .footer { background: #0b1b31; color: #e5e7eb; }
+
+/* Top navigation */
+.topnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: saturate(180%) blur(8px);
+    border-bottom: 1px solid var(--border-gray);
+}
+body.dark .topnav { background: rgba(15,23,42,0.85); border-color: #1f2937; }
+.topnav .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.brand {
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+body.dark .brand { color: #e5e7eb; }
+.nav-links a { margin-left: 1rem; color: var(--charcoal); }
+body.dark .nav-links a { color: #e5e7eb; }
+.theme-toggle {
+    margin-left: 1rem;
+    border: 1px solid var(--border-gray);
+    background: transparent;
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+}
+body.dark .theme-toggle { border-color: #334155; color: #e5e7eb; }
 
 /* ==========================================================================
    CITATIONS
