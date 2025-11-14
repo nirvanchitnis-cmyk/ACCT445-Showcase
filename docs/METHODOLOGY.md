@@ -101,9 +101,80 @@ Our study focuses on this disclosure heterogeneity, testing whether opacity in C
 
 ---
 
-## 3. Data & Sample Construction
+## 3. Hypotheses
 
-### 3.1 Sample Selection
+Based on information asymmetry theory (Diamond & Verrecchia, 1991) and empirical evidence on disclosure quality effects (Botosan, 1997; Li, 2008; Hutton et al., 2009), we test the following hypotheses:
+
+### H1: Opacity Premium (Main Effect)
+
+**H1a (Return Effect):** Banks with higher CECL disclosure opacity (CNOI) earn lower subsequent stock returns.
+
+**Rationale:** Opaque disclosures increase investor uncertainty and adverse selection costs, leading to higher required returns (ex ante) but lower realized returns (ex post) as the opacity becomes apparent. Investors rationally discount opaque banks, but initial mispricing creates a return differential.
+
+**Empirical prediction:** Decile portfolios sorted on CNOI should exhibit monotonic performance, with D1 (transparent) outperforming D10 (opaque). The long-short spread (D1-D10) should be statistically and economically significant.
+
+---
+
+**H1b (Risk-Adjusted Returns):** The opacity premium persists after controlling for systematic risk factors (Fama-French, momentum).
+
+**Rationale:** If opacity merely proxies for loadings on established risk factors (size, value, profitability), it should not predict alphas. If opacity captures unique information risk, alphas should remain significant post-adjustment.
+
+**Empirical prediction:** FF5 and Carhart alphas for the long-short portfolio should be positive and significant (t > 2.0, ideally t > 3.0 per Harvey et al. 2016).
+
+---
+
+### H2: Crisis Amplification (Event Study)
+
+**H2:** Opaque banks experience worse abnormal returns during banking crises than transparent banks.
+
+**Rationale:** During systemic stress (e.g., SVB collapse), investors face heightened uncertainty and limited time for due diligence. Opaque disclosures exacerbate information asymmetry, triggering larger selloffs as investors flee to "information-transparent" safe havens (flight to quality + flight to transparency).
+
+**Empirical prediction:** Cumulative abnormal returns (CAR) during the SVB crisis event window (March 9-17, 2023) should be more negative for high-CNOI banks. The CAR difference between Q4 (opaque) and Q1 (transparent) should be statistically significant, robust to BMP, Corrado, and sign tests.
+
+---
+
+### H3: Panel Predictability (Multidimensional Opacity)
+
+**H3a (CNOI Coefficient):** In panel regressions controlling for bank characteristics and time fixed effects, CNOI negatively predicts returns.
+
+**Rationale:** Fixed effects absorb time-invariant bank quality and macro shocks, isolating within-bank variation in opacity. If CNOI captures transient information quality (e.g., management's disclosure choices), it should predict returns conditional on firm and time dummies.
+
+**Empirical prediction:** β(CNOI) < 0 in fixed effects regressions, statistically significant with Driscoll-Kraay or two-way clustered standard errors.
+
+---
+
+**H3b (Unique Variance):** CNOI predicts returns beyond simple readability metrics (Fog Index, Flesch-Kincaid).
+
+**Rationale:** If CNOI merely replicates readability, it offers no incremental value. Multidimensional opacity (compliance, stability, granularity) should capture orthogonal information.
+
+**Empirical prediction:** In horse-race regressions (returns ~ CNOI + Fog + controls), CNOI coefficient remains significant while Fog becomes insignificant. Incremental R² from adding CNOI to a Fog-only model should be statistically significant (F-test p < 0.05).
+
+---
+
+### H4: Dimension Heterogeneity (Exploratory)
+
+**H4:** Not all CNOI dimensions contribute equally to return predictability. Dimensions reflecting regulatory compliance (R) and temporal stability (S) should outperform readability (J).
+
+**Rationale:** Regulatory non-compliance signals weak internal controls or management quality (persistent firm characteristic). Temporal instability signals management uncertainty or strategic obfuscation (time-varying information). Readability may simply reflect business complexity (noise).
+
+**Empirical prediction:** Univariate regressions of returns on individual dimensions should show Stability (S) and Required Items (R) with larger |β| and higher t-stats than Readability (J). Variance explained (R²) should rank: S > R > G > X > D > J > T.
+
+---
+
+**Null Hypotheses (to reject):**
+
+- **H0a:** CNOI does not predict returns (β = 0 in all specifications)
+- **H0b:** Opacity effects are subsumed by factor loadings (alpha = 0 post-FF5 adjustment)
+- **H0c:** CAR differences across CNOI quartiles are zero during crises
+- **H0d:** CNOI has no incremental predictive power beyond Fog Index (Δ R² = 0)
+
+We require **|t| > 3.0** for primary hypotheses (H1a, H1b) to meet Harvey-Liu-Zhu (2016) multiple testing thresholds. For secondary hypotheses (H2-H4), we use conventional **p < 0.05** with Bonferroni correction where applicable.
+
+---
+
+## 4. Data & Sample Construction
+
+### 4.1 Sample Selection
 
 **SEC-registered banks:** We identify banks from SEC EDGAR using SIC codes 6020 (commercial banks), 6022 (state banks), and 6035 (savings institutions). We focus on publicly traded banks with market cap >$100M to ensure liquid trading. This yields 50 unique banks.
 
@@ -116,7 +187,7 @@ Our study focuses on this disclosure heterogeneity, testing whether opacity in C
 
 **Survivorship bias mitigation:** We include delisted banks (e.g., First Republic, SVB) where available, imputing -55% returns for performance delists following Shumway (1997). However, our sample is predominantly post-crisis, so survivorship effects are limited.
 
-### 3.2 CNOI Index Construction
+### 4.2 CNOI Index Construction
 
 The CNOI index aggregates seven dimensions, each scored 0-100 (higher = more opaque):
 
@@ -170,7 +241,7 @@ CNOI = 0.2×D + 0.2×G + 0.2×R + 0.1×J + 0.1×T + 0.1×S + 0.1×X
 
 **Interpretation:** CNOI exhibits right skew, with most banks moderately transparent (CNOI 10-18) but a tail of opaque disclosers (CNOI 25-31). Granularity (G) and Stability (S) show highest variance, suggesting these dimensions vary most across banks.
 
-### 3.3 Market Data
+### 4.3 Market Data
 
 **Stock returns:** Daily returns retrieved from Yahoo Finance (yfinance Python library) for all 50 banks, date range 2023-01-01 to 2025-11-15. Returns computed as:
 ```
@@ -201,7 +272,7 @@ Adjusted for dividends and splits using yfinance's `adjusted close` series.
 
 **Interpretation:** Sample banks are mid-sized regional/super-regional institutions (median $3.15B market cap), well-capitalized (12.8% Tier 1 ratio), with profitability and leverage typical of the banking sector.
 
-### 3.4 Data Quality & Validation
+### 4.4 Data Quality & Validation
 
 **CIK → Ticker mapping accuracy:** We use SEC's official CIK-ticker mapping file (updated daily). Manual verification of 50 banks shows 99.2% accuracy (1 ticker change detected and corrected).
 
@@ -220,9 +291,9 @@ Adjusted for dividends and splits using yfinance's `adjusted close` series.
 
 ---
 
-## 4. Empirical Methods
+## 5. Empirical Methods
 
-### 4.1 Decile Portfolio Analysis
+### 5.1 Decile Portfolio Analysis
 
 **Sorting procedure:** Each quarter, rank all banks by CNOI score and form 10 equal-weighted deciles (D1 = lowest CNOI/most transparent, D10 = highest CNOI/most opaque). Decile 5 contains ~5 banks each quarter.
 
@@ -248,7 +319,7 @@ H1: E[R_D1-D10] > 0  (transparent outperform opaque)
 - **Max Drawdown:** Largest peak-to-trough decline
 - **Win Rate:** % of quarters with positive return
 
-### 4.2 Factor-Adjusted Returns
+### 5.2 Factor-Adjusted Returns
 
 To ensure the opacity premium is not compensation for systematic risk exposures, we estimate factor models:
 
@@ -274,7 +345,7 @@ H1: α_D1-D10 > 0  (transparent earn abnormal returns)
 
 **Interpretation:** If α_D1-D10 remains significant and positive, the opacity premium cannot be explained by market, size, value, profitability, investment, or momentum factors—suggesting a unique opacity risk factor or mispricing.
 
-### 4.3 Event Study: SVB Crisis (March 2023)
+### 5.3 Event Study: SVB Crisis (March 2023)
 
 The collapse of Silicon Valley Bank (March 10, 2023) provides a quasi-natural experiment to test whether opacity predicts crisis performance.
 
@@ -328,7 +399,7 @@ H1: CAR_Q4 < CAR_Q1  (opaque banks suffer worse crisis losses)
 
 Using multiple tests guards against Type I error from parametric assumptions.
 
-### 4.4 Difference-in-Differences
+### 5.4 Difference-in-Differences
 
 CECL adoption occurred in waves: large banks (assets >$250M) adopted in FY 2020, smaller banks in FY 2023. This staggered adoption creates a quasi-experiment.
 
@@ -409,7 +480,7 @@ H1: β < 0  (opacity predicts underperformance)
 
 ---
 
-## 5. Construct Validation
+## 6. Construct Validation
 
 Before testing market predictions, we validate that CNOI measures opacity rather than noise or redundant readability.
 
@@ -504,7 +575,7 @@ To understand which CNOI dimensions drive variation, we correlate individual dim
 
 ---
 
-## 6. Results
+## 7. Results
 
 ### 6.1 Decile Portfolio Performance
 
@@ -629,7 +700,7 @@ We exploit staggered CECL adoption to test whether early adopters with high opac
 
 ---
 
-## 7. Robustness Checks
+## 8. Robustness Checks
 
 ### 7.1 Parallel Trends (DiD)
 
@@ -684,9 +755,9 @@ Plot shows δ_τ ≈ 0 for τ < 2020Q1 (parallel pre-trends), then δ_τ < 0 for
 
 ---
 
-## 8. Limitations & Threats to Validity
+## 9. Limitations & Threats to Validity
 
-### 8.1 Internal Validity
+### 9.1 Internal Validity
 
 **Selection bias:** Our sample is limited to SEC-registered banks (large, publicly traded). Smaller private banks (the majority of U.S. banking institutions) are excluded. If opacity effects differ by size, external validity is limited. However, large banks pose greater systemic risk, making this sample policy-relevant.
 
@@ -694,7 +765,7 @@ Plot shows δ_τ ≈ 0 for τ < 2020Q1 (parallel pre-trends), then δ_τ < 0 for
 
 **Measurement error:** CNOI is manually scored, introducing subjectivity. Inter-rater reliability (κ = 0.81) is substantial but imperfect. Measurement error attenuates coefficients toward zero (classical errors-in-variables), so true effects may be larger.
 
-### 8.2 External Validity
+### 9.2 External Validity
 
 **Time period:** Our sample spans 2023-2025, a period of elevated banking stress (SVB crisis, regional bank turmoil). Opacity effects may be amplified during crises and weaker in calm periods. Subsample analysis (Pre/During/Post-COVID) shows effects persist, but longer time series are needed.
 
@@ -702,7 +773,7 @@ Plot shows δ_τ ≈ 0 for τ < 2020Q1 (parallel pre-trends), then δ_τ < 0 for
 
 **Industry:** Findings are specific to banking. Other industries have different disclosure requirements and investor bases. We do not claim generalizability to non-financials.
 
-### 8.3 Confounds
+### 9.3 Confounds
 
 **COVID-19:** The pandemic overlaps with CECL adoption (2020), potentially confounding DiD estimates. We include quarter fixed effects to absorb macro shocks, and parallel trends tests support identification. However, residual confounding from bank-specific COVID exposures (PPP loans, forbearance) is possible.
 
@@ -710,7 +781,7 @@ Plot shows δ_τ ≈ 0 for τ < 2020Q1 (parallel pre-trends), then δ_τ < 0 for
 
 **Regulatory changes:** CECL adoption coincided with other reforms (stress testing updates, liquidity requirements). DiD isolates CECL by comparing early vs. late adopters, but spillover effects from concurrent regulations cannot be fully ruled out.
 
-### 8.4 Statistical Inference
+### 9.4 Statistical Inference
 
 **Multiple testing:** We test 7 CNOI dimensions individually (Table 6), risking Type I error inflation. Using Bonferroni correction (α = 0.05/7 ≈ 0.007), Stability (p < 0.001) and Required Items (p = 0.003) remain significant, but Consistency (p = 0.021) becomes marginal. Harvey et al. (2016) recommend t > 3.0 for financial economics; our main CNOI coefficient (t = 3.15) meets this threshold.
 
@@ -720,9 +791,9 @@ Plot shows δ_τ ≈ 0 for τ < 2020Q1 (parallel pre-trends), then δ_τ < 0 for
 
 ---
 
-## 9. Conclusion & Contributions
+## 10. Conclusion & Contributions
 
-### 9.1 Summary of Findings
+### 10.1 Summary of Findings
 
 This study develops and validates the CECL Note Opacity Index (CNOI), a multidimensional measure of bank disclosure quality, and tests whether opacity predicts stock returns and risk. Analyzing 50 banks over 509 filings (2023-2025), we find:
 
@@ -736,7 +807,7 @@ This study develops and validates the CECL Note Opacity Index (CNOI), a multidim
 
 5. **Construct validation:** CNOI correlates moderately with Gunning Fog Index (ρ = 0.52) but retains significant predictive power in horse-race regressions (t = -2.58, p = 0.01), confirming it captures unique variance beyond readability.
 
-### 9.2 Contributions
+### 10.2 Contributions
 
 **Methodological:** We demonstrate the value of combining multiple empirical strategies—decile backtests, robust event studies, DiD, and panel econometrics—to triangulate on causal effects and establish construct validity. The CNOI index provides a replicable framework for disclosure quality measurement adaptable to other standards (IFRS 9, lease accounting, etc.).
 
@@ -744,7 +815,7 @@ This study develops and validates the CECL Note Opacity Index (CNOI), a multidim
 
 **Practical:** For investors, CNOI offers a quantifiable signal to screen banks, potentially exploitable in long-short strategies (Sharpe 1.12). For regulators (SEC, FDIC, OCC), results highlight that disclosure enforcement gaps have real consequences—opaque banks underperform and destabilize markets during crises. Standard-setters (FASB) should consider disclosure quality metrics when evaluating CECL implementation success.
 
-### 9.3 Future Research
+### 10.3 Future Research
 
 1. **Longer time series:** Extend sample to 2016-2030 to capture full CECL adoption cycle and multiple business/credit cycles.
 
@@ -756,7 +827,7 @@ This study develops and validates the CECL Note Opacity Index (CNOI), a multidim
 
 5. **Machine learning:** Train NLP models to automate CNOI scoring, enabling real-time monitoring at scale.
 
-### 9.4 Statistical Inference & Reproducibility Policies
+### 10.4 Statistical Inference & Reproducibility Policies
 
 To ensure robustness and replicability, we adopt the following policies for all empirical tests:
 
@@ -810,7 +881,7 @@ All results are fully reproducible with one command (`make reproduce`):
 
 ---
 
-## 10. References
+## 11. References
 
 ### Accounting Standards
 

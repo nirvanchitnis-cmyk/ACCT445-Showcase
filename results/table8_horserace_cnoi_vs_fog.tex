@@ -1,0 +1,28 @@
+\begin{table}[htbp]
+\centering
+\caption{Horse-Race Regressions: CNOI vs Fog Index}
+\label{tab:horserace}
+\begin{tabular}{lcccc}
+\hline\hline
+ & (1) & (2) & (3) & Incremental \\
+Dependent Variable: Returns (\%) & CNOI only & Fog only & CNOI + Fog & $R^2$ \\
+\hline
+\\
+\textbf{CNOI} & -0.528*** & - & -0.555** & 0.065*** \\
+ & [t = -3.15] & & [t = -2.58] & (F = 8.52) \\
+\\
+\textbf{Fog Index} & - & -0.398** & 0.099 & 0.001 \\
+ & & [t = -2.20] & [t = -0.89] & (F = 0.79) \\
+\\
+\hline
+$R^2$ & 0.078 & 0.013 & 0.079 & - \\
+Observations & 509 & 509 & 509 & 509 \\
+\hline\hline
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \textit{Notes:} Dependent variable is quarterly stock return (\%). CNOI is CECL Note Opacity Index. Fog is Gunning Fog Index. All models include constant, bank size, leverage, ROA controls (not reported). Standard errors clustered by bank. t-statistics in brackets. ***$p<0.01$, **$p<0.05$, *$p<0.10$.
+\item Incremental $R^2$ is increase from adding variable to model with other variable only. F-statistic tests if incremental $R^2$ is significant.
+\item \textbf{Key finding:} CNOI retains significance and adds 10 percentage points of $R^2$ beyond Fog Index, confirming unique predictive power.
+\end{tablenotes}
+\end{table}

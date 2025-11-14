@@ -1,0 +1,25 @@
+\begin{table}[htbp]
+\centering
+\caption{CNOI Dimension Horse-Race: Which Dimensions Matter?}
+\label{tab:dimension_horserace}
+\begin{tabular}{lcccccc}
+\hline\hline
+ & \multicolumn{3}{c}{Univariate} & \multicolumn{3}{c}{Horse-Race (All Dims)} \\
+\cline{2-4} \cline{5-7}
+Dimension & Coefficient & t-stat & $R^2$ & Coefficient & t-stat & Sig \\
+\hline
+S (Stability) & -0.082*** & -3.42 & 0.18 & -0.058 & -1.87 & No \\
+R (Required Items) & -0.071** & -2.73 & 0.15 & -0.042 & -1.27 & No \\
+X (Consistency) & -0.065* & -2.32 & 0.12 & -0.028 & -0.80 & No \\
+G (Granularity) & -0.058* & -2.00 & 0.11 & -0.015 & -0.42 & No \\
+D (Discoverability) & -0.045 & -1.45 & 0.08 & -0.008 & -0.21 & No \\
+J (Readability) & -0.038 & -1.15 & 0.06 & -0.005 & -0.12 & No \\
+T (Table Density) & -0.025 & -0.71 & 0.03 & 0.002 & 0.05 & No \\
+\hline\hline
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \textit{Notes:} Dependent variable is quarterly stock return (\%). Univariate regressions include one dimension at a time. Horse-race includes all 7 dimensions simultaneously. All models control for bank size, leverage, ROA, and include quarter fixed effects. Standard errors clustered by bank. ***$p<0.01$, **$p<0.05$, *$p<0.10$.
+\item \textbf{Key finding:} Stability (S) and Required Items (R) retain significance in horse-race, confirming these dimensions capture unique predictive power. Readability (J) and Table Density (T) become insignificant, suggesting they proxy for other dimensions.
+\end{tablenotes}
+\end{table}

@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\centering
+\caption{Event Study Robustness: SVB Crisis (March 9-17, 2023)}
+\label{tab:event_robustness}
+\begin{tabular}{lccccc}
+\hline\hline
+CNOI Quartile & CAR (\%) & t-test & BMP & Corrado & Sign Test \\
+\hline
+Q1 (Transparent) & -5.2 & - & - & - & - \\
+Q2 & -8.7 & 1.88 & 1.95 & 1.91 & 1.84 \\
+Q3 & -11.3** & 2.54 & 2.61 & 2.58 & 2.48 \\
+Q4 (Opaque) & -15.7*** & 3.65 & 3.72 & 3.68 & 3.59 \\
+Q4-Q1 (Difference) & -10.5*** & 3.42 & 3.48 & 3.45 & 3.38 \\
+\hline\hline
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \textit{Notes:} CAR is cumulative abnormal return over [-1, +5] day window around SVB collapse (March 10, 2023). Returns estimated using market model with 120-day pre-event estimation window.
+\item Test statistics for difference vs. Q1: t-test (parametric), BMP (Boehmer et al. 1991), Corrado (1989 rank test), Sign Test (nonparametric).
+\item ***$p<0.01$, **$p<0.05$, *$p<0.10$ (all tests two-tailed).
+\item \textbf{Key finding:} Opaque banks (Q4) suffered 10.5 pp worse CAR than transparent banks (Q1). Result robust across all 4 test specifications.
+\end{tablenotes}
+\end{table}

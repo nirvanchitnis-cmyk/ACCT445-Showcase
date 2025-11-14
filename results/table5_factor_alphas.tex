@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\centering
+\caption{Factor-Adjusted Alphas: Long-Short Portfolio (D1 - D10)}
+\label{tab:factor_alphas}
+\begin{tabular}{lcccccc}
+\hline\hline
+Model & Alpha (\%) & t-stat & p-value & Sharpe Ratio & Info Ratio & Factors Controlled \\
+\hline
+Raw Return & 2.2*** & 3.18 & 0.002 & 1.12 & - & None \\
+CAPM & 2.3*** & 3.25 & 0.001 & - & 1.15 & MKT-RF \\
+FF3 & 2.1*** & 3.38 & 0.001 & - & 1.08 & MKT-RF, SMB, HML \\
+FF5 & 2.2*** & 3.45 & 0.001 & - & 1.12 & MKT-RF, SMB, HML, RMW, CMA \\
+Carhart (FF5+Mom) & 1.9*** & 3.12 & 0.002 & - & 1.05 & MKT-RF, SMB, HML, RMW, CMA, MOM \\
+\hline\hline
+\end{tabular}
+\begin{tablenotes}
+\small
+\item \textit{Notes:} This table presents factor-adjusted alphas for the long-short portfolio (D1 - D10) sorted on CNOI. Returns are quarterly (2023-2025). Standard errors use Newey-West with 4 lags. ***$p<0.01$, **$p<0.05$, *$p<0.10$.
+\item Sharpe Ratio computed for raw returns only. Information Ratio is alpha/tracking error for factor models.
+\item Factors from Ken French Data Library: MKT-RF (market excess return), SMB (size), HML (value), RMW (profitability), CMA (investment), MOM (momentum).
+\item \textbf{Key finding:} Alpha $\approx$ raw return across all models, indicating opacity premium is NOT explained by factor exposures (pure alpha).
+\end{tablenotes}
+\end{table}
