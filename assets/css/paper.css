@@ -21,9 +21,9 @@
     --red: #ef4444;
 
     /* Text Colors */
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --text-muted: #6b7280;
+    --text-primary: #000000;
+    --text-secondary: #000000;
+    --text-muted: #333333;
 
     /* Background Colors */
     --bg-white: #ffffff;
@@ -59,7 +59,7 @@
 
 html {
     scroll-behavior: smooth;
-    font-size: 20px;
+    font-size: 22px;
 }
 
 body {
@@ -88,7 +88,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-    font-size: 3.5rem;
+    font-size: 4rem;
     background: var(--gradient-blue);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -99,7 +99,7 @@ h1 {
 }
 
 h2 {
-    font-size: 2.75rem;
+    font-size: 3.25rem;
     margin-top: 5rem;
     padding-left: 20px;
     border-left: 8px solid var(--primary-blue);
@@ -118,7 +118,7 @@ h2::before {
 }
 
 h3 {
-    font-size: 2rem;
+    font-size: 2.5rem;
     color: var(--text-primary);
     margin-top: 2.5rem;
     padding-bottom: 0.5rem;
@@ -126,7 +126,7 @@ h3 {
 }
 
 h4 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     color: var(--text-primary);
     font-weight: 600;
     margin-top: 2rem;
@@ -499,38 +499,38 @@ figcaption {
 
 @media (max-width: 1024px) {
     html {
-        font-size: 19px;
+        font-size: 21px;
     }
 
     body {
         padding: 40px 25px;
     }
 
-    h1 { font-size: 3rem; }
-    h2 { font-size: 2.25rem; }
-    h3 { font-size: 1.75rem; }
+    h1 { font-size: 3.5rem; }
+    h2 { font-size: 3rem; }
+    h3 { font-size: 2.25rem; }
 }
 
 @media (max-width: 768px) {
     html {
-        font-size: 18px;
+        font-size: 20px;
     }
 
     body {
         padding: 30px 20px;
     }
 
-    h1 { font-size: 2.5rem; }
-    h2 { font-size: 2rem; margin-top: 3rem; }
-    h3 { font-size: 1.5rem; }
-    h4 { font-size: 1.25rem; }
+    h1 { font-size: 3rem; }
+    h2 { font-size: 2.5rem; margin-top: 3rem; }
+    h3 { font-size: 2rem; }
+    h4 { font-size: 1.5rem; }
 
     #TOC {
         padding: 30px 25px;
     }
 
     table {
-        font-size: 0.85rem;
+        font-size: 0.9rem;
     }
 
     th, td {
@@ -540,15 +540,15 @@ figcaption {
 
 @media (max-width: 480px) {
     html {
-        font-size: 17px;
+        font-size: 19px;
     }
 
     body {
         padding: 20px 15px;
     }
 
-    h1 { font-size: 2rem; }
-    h2 { font-size: 1.75rem; }
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 2rem; }
 
     ul, ol {
         margin-left: 2rem;
