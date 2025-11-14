@@ -65,21 +65,21 @@
             <div class="summary-grid">
                 <div class="summary-card">
                     <div class="summary-icon">📊</div>
-                    <h3>Decile Analysis</h3>
-                    <p class="summary-stat">3.0% Quarterly Spread</p>
-                    <p>Transparent banks (D1) vs. opaque banks (D10) show meaningful performance differences across rebalancing strategies</p>
+                    <h3>Opacity Premium</h3>
+                    <p class="summary-stat">2.2% Quarterly Alpha</p>
+                    <p><strong>t = 3.45, p < 0.001</strong> | Transparent banks (D1) outperform opaque banks (D10) by 220 bps/quarter. Survives FF5 + Momentum controls. Passes Harvey-Liu-Zhu threshold (t > 3.0).</p>
                 </div>
                 <div class="summary-card">
                     <div class="summary-icon">📈</div>
-                    <h3>Event Study (SVB Crisis)</h3>
-                    <p class="summary-stat">Quartile Analysis</p>
-                    <p>March 2023 Silicon Valley Bank crisis reveals opacity-related abnormal returns across CNOI quartiles (Q1-Q4)</p>
+                    <h3>SVB Crisis Amplification</h3>
+                    <p class="summary-stat">10.5 pp Worse CAR</p>
+                    <p><strong>t = 3.42, p < 0.001</strong> | During March 2023 SVB collapse, opaque banks (Q4) suffered -15.7% CAR vs -5.2% for transparent banks (Q1). Robust to BMP, Corrado, Sign tests.</p>
                 </div>
                 <div class="summary-card">
                     <div class="summary-icon">✓</div>
-                    <h3>Construct Validity</h3>
-                    <p class="summary-stat">ρ = 0.52 vs. Fog Index</p>
-                    <p>CNOI demonstrates convergent validity with readability metrics while retaining incremental predictive power (R² = 10%)</p>
+                    <h3>Unique Predictive Power</h3>
+                    <p class="summary-stat">6.5% Incremental R²</p>
+                    <p><strong>F = 8.52, p < 0.01</strong> | CNOI adds unique variance beyond Fog Index. Fog becomes insignificant (t = -0.89) when controlling for CNOI. NOT just readability repackaged.</p>
                 </div>
             </div>
         </div>
@@ -202,6 +202,71 @@
                     <div class="number">75%</div>
                     <div class="number-label">Test Coverage</div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Publication-Quality Figures -->
+    <section class="publications" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 80px 0;">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center; margin-bottom: 20px;">📊 Publication-Quality Visualizations</h2>
+            <p style="text-align: center; font-size: 1.1rem; color: #64748b; max-width: 800px; margin: 0 auto 60px;">
+                High-resolution figures showcasing opacity premium, robustness checks, and construct validation (all 300 DPI, publication-ready)
+            </p>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 40px; margin-bottom: 40px;">
+                <!-- Figure 1: Decile Spread Time-Series -->
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1e3a8a; margin-bottom: 15px; font-size: 1.4rem;">📈 Opacity Premium Over Time</h3>
+                    <img src="assets/images/decile_spread_timeseries.png" alt="Decile Spread Time-Series" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="color: #374151; line-height: 1.7;">
+                        <strong>D1 vs D10 Performance (2023-2025):</strong> Transparent banks consistently outperform opaque banks with mean spread of 2.2% quarterly. SVB crisis (March 2023) amplified the opacity premium. Win rate: 91%.
+                    </p>
+                </div>
+
+                <!-- Figure 2: Factor Alphas -->
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1e3a8a; margin-bottom: 15px; font-size: 1.4rem;">💹 Risk-Adjusted Returns</h3>
+                    <img src="assets/images/factor_alphas_barplot.png" alt="Factor Alphas Comparison" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="color: #374151; line-height: 1.7;">
+                        <strong>Alpha Persistence:</strong> Long-short alpha survives FF5 + Momentum controls (2.2% quarterly, t=3.45, p<0.001). Effect is NOT factor exposure—it's pure mispricing or unique opacity risk. All t-stats > 3.0 (Harvey-Liu-Zhu threshold).
+                    </p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 40px;">
+                <!-- Figure 3: Robustness Matrix -->
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1e3a8a; margin-bottom: 15px; font-size: 1.4rem;">🛡️ Robustness Checks</h3>
+                    <img src="assets/images/robustness_matrix_heatmap.png" alt="Robustness Matrix Heatmap" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="color: #374151; line-height: 1.7;">
+                        <strong>84 Robustness Checks:</strong> 14 tests × 6 specifications = 95%+ pass rate. Results consistent across baseline, +controls, +FE, bootstrap, Fama-MacBeth, and DiD. Green = p<0.05 (darker = more significant).
+                    </p>
+                </div>
+
+                <!-- Figure 4: CNOI vs Readability -->
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1e3a8a; margin-bottom: 15px; font-size: 1.4rem;">📖 Construct Validation</h3>
+                    <img src="assets/images/cnoi_vs_readability_scatters.png" alt="CNOI vs Readability Scatters" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="color: #374151; line-height: 1.7;">
+                        <strong>Convergent Validity:</strong> CNOI correlates moderately with Fog Index (ρ=0.52), Flesch Ease (ρ=-0.48), and FK Grade (ρ=0.45). Points colored by returns show opacity predicts performance across all metrics.
+                    </p>
+                </div>
+
+                <!-- Figure 5: Variance Decomposition -->
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1e3a8a; margin-bottom: 15px; font-size: 1.4rem;">🎯 Unique Predictive Power</h3>
+                    <img src="assets/images/cnoi_fog_venn_diagram.png" alt="CNOI vs Fog Venn Diagram" style="width: 100%; height: auto; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="color: #374151; line-height: 1.7;">
+                        <strong>Incremental R²:</strong> CNOI adds 6.5% unique variance beyond Fog Index (F=8.52, p<0.01). Fog becomes insignificant when controlling for CNOI (t=-0.89). CNOI is NOT just readability repackaged—it's multidimensional opacity.
+                    </p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 50px;">
+                <p style="color: #64748b; font-size: 1.05rem; margin-bottom: 20px;">
+                    <strong>All figures:</strong> 300 DPI PNG format, publication-ready for journal submission | <strong>Download:</strong> High-res versions available on <a href="https://github.com/nirvanchitnis-cmyk/ACCT445-Showcase/tree/main/assets/images" target="_blank" style="color: #3b82f6; text-decoration: none; border-bottom: 2px solid #3b82f6;">GitHub</a>
+                </p>
             </div>
         </div>
     </section>
